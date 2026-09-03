@@ -1,32 +1,28 @@
-import { useEffect, useState } from "react";
-import { getUsers, login } from "../api/API.js";
-
-// TODO: replace with a real login form; this is a placeholder test account.
-const TEST_EMAIL = "johnny@cerawley.com";
-const TEST_PASSWORD = "password";
+import { useState } from "react";
+import { Button } from '@mantine/core';
+import { logout } from '../api/API';
+import { useNavigate } from '../router';
 
 export default function Home() {
-  const [users, setUsers] = useState([]);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    login(TEST_EMAIL, TEST_PASSWORD)
-      .then(getUsers)
-      .then(setUsers)
-      .catch(console.error);
-  }, []);
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      navigate('/login');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <div>
-      <h2>Users</h2>
-
-      {users.map((user) => (
-        <div key={user._id}>
-          <p>
-            {user.firstName} {user.lastName}
-          </p>
-          <p>{user.bio}</p>
-        </div>
-      ))}
+      <h2>Home</h2>
+      <Button size="xs" onClick={handleLogout} loading={isLoggingOut}>
+        Log out
+      </Button>
     </div>
   );
 }

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">Default club icon</title>
+  <desc id="desc">A blue club icon with the Crewly abstract smile shape</desc>
+  <rect width="96" height="96" rx="16" fill="#1864ab" />
+  <rect x="27" y="23" width="42" height="42" rx="13" fill="#d0ebff" transform="rotate(18 48 44)" />
+  <path d="M37 44c6 7 16 7 22 0" fill="none" stroke="#1864ab" stroke-linecap="round" stroke-width="4" />
+</svg>
