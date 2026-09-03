@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Box, Button, Group, Paper, Text, Title } from '@mantine/core';
+import { Box, Button, Group, Paper, Text, Title, TextInput, Select } from '@mantine/core';
 import { logout } from '../api/API';
 import { useNavigate } from '../router';
 
@@ -20,12 +20,19 @@ export default function Home() {
   return (
     <Box p="xl">
       <Group justify="space-between" align="center" mb="xl">
-        <Title order={2}>Listing</Title>
+        <Title order={2}>Find Your New Adventure</Title>
         <Button size="xs" onClick={handleLogout} loading={isLoggingOut}>
           Log out
         </Button>
       </Group>
-
+     <Paper withBorder p="md" mb="xl">
+        <Group gap="md" wrap="wrap">
+          <TextInput placeholder="Search listings" style={{ flex: 1, minWidth: 200 }} />
+          <Select placeholder="Category" data={['Sports', 'Music', 'Volunteering', 'Academic']} w={160} />
+          <Select placeholder="Location" data={['On campus', 'Off campus']} w={160} />
+          <Select placeholder="Sort by" data={['Newest', 'Oldest', 'A–Z']} w={160} />
+        </Group>
+      </Paper>
       <Box
         style={{
           display: "grid",
