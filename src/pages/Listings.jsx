@@ -97,19 +97,20 @@ function Listings(){
                 </Box>
 
                 <Box>
-                    <Title order={2} mb="md">Frequently Asked Questions</Title>
+                    <Title order={2} mb="md">Frequently Questions & Answers</Title>
+                    <Paper withBorder p="md">
+                        <Stack>
+                            <Textarea
+                                label="Ask a question"
+                                placeholder="Type your question here..."
+                                minRows={3}
+                            />
 
-                    <Accordion variant="separated">
-                        {fakeFAQ.map((faq, index) => (
-                            <Accordion.Item
-                                key={index}
-                                value={`faq-${index}`}
-                            >
-                                <Accordion.Control>{faq.question}</Accordion.Control>
-                                <Accordion.Panel>{faq.answer}</Accordion.Panel>
-                            </Accordion.Item>
-                        ))}
-                    </Accordion>
+                            <Button w="fit-content">
+                                Submit Question
+                            </Button>
+                        </Stack>
+                    </Paper>
                 </Box>
 
                 <Box>
