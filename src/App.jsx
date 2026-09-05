@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AppShell, Avatar, Divider, Image, NavLink, Stack } from '@mantine/core'
+import { AppShell, Avatar, Button, Divider, Image, NavLink, Stack } from '@mantine/core'
 import { IconHome2, IconInfoCircle, IconShieldLock, IconUserCircle } from '@tabler/icons-react'
 import { BrowserRouter, Routes, Route, Link, useLocation } from './router'
 import { getCurrentUser } from './api/API'
@@ -52,6 +52,9 @@ function AppRoutes() {
         <Stack justify="space-between" h="100%">
           <Stack gap="xs">
             <Image className="sidebar-logo" src={crewlyLogoLight} alt="Crewly" w={160} mb="md" />
+            <Button variant="white" color="blue" fullWidth mb="xs">
+              Add listing
+            </Button>
             <NavLink className="sidebar-link" component={Link} to="/" label="Home" leftSection={<IconHome2 size={18} />} active={pathname === '/'} />
             <NavLink className="sidebar-link" component={Link} to="/admin" label="Admin" leftSection={<IconShieldLock size={18} />} active={pathname === '/admin'} />
             <NavLink className="sidebar-link" component={Link} to="/about" label="About" leftSection={<IconInfoCircle size={18} />} active={pathname === '/about'} />

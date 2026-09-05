@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Box, Button, Group, Paper, Text, Title, TextInput, Select } from '@mantine/core';
+import { Box, Button, Group, Paper, Select, Text, TextInput, Title } from '@mantine/core';
 import { logout } from '../api/API';
 import { useNavigate } from '../router';
 
@@ -20,12 +20,13 @@ export default function Home() {
   return (
     <Box p="xl">
       <Group justify="space-between" align="center" mb="xl">
-        <Title order={2}>Find Your New Adventure</Title>
+        <Title order={2}>Home</Title>
         <Button size="xs" onClick={handleLogout} loading={isLoggingOut}>
           Log out
         </Button>
       </Group>
-     <Paper withBorder p="md" mb="xl">
+
+      <Paper withBorder p="md" mb="xl">
         <Group gap="md" wrap="wrap">
           <TextInput placeholder="Search listings" style={{ flex: 1, minWidth: 200 }} />
           <Select placeholder="Category" data={['Sports', 'Music', 'Volunteering', 'Academic']} w={160} />
@@ -33,6 +34,7 @@ export default function Home() {
           <Select placeholder="Sort by" data={['Newest', 'Oldest', 'A–Z']} w={160} />
         </Group>
       </Paper>
+
       <Box
         style={{
           display: "grid",
@@ -44,6 +46,8 @@ export default function Home() {
         {Array.from({ length: 8 }).map((_, i) => (
           <Paper
             key={i}
+            className="listing-card"
+            onClick={() => navigate(`/listings/${i + 1}`)}
             withBorder
             p="lg"
             shadow="sm"
@@ -52,6 +56,7 @@ export default function Home() {
               borderTop: "3px solid var(--mantine-color-blue-6)",
               display: "flex",
               flexDirection: "column",
+              cursor: "pointer",
             }}
           >
             <Text fw={600} fz="lg" mb="sm">
