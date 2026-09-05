@@ -20,7 +20,7 @@ import {
   TextInput,
   Title,
 } from '@mantine/core'
-import { addClubLeader, createClub, deleteClub, getClubs, getUsers, removeClubLeader, updateClub } from '../api/API'
+import { addClubLeader, createClub, deleteClub, getClubs, getUsers, removeClubLeader, updateClub } from '../api/userAPI'
 import { Link as RouterLink, useNavigate } from '../router'
 import defaultClubIcon from '../assets/default-club-icon.svg'
 

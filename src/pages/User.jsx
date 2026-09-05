@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Alert, Avatar, Box, Button, Divider, Group, Modal, Paper, PasswordInput, Stack, Text, TextInput, Timeline, Title } from '@mantine/core'
 import { useParams, useNavigate } from '../router'
-import { deleteAccount, getCurrentUser, getUser, updateCurrentUser } from '../api/API'
+import { deleteAccount, getCurrentUser, getUser, updateCurrentUser } from '../api/userAPI'
 
 function getErrorMessage(requestError) {
   return requestError.response?.data?.error?.message || 'Unable to complete the request.'

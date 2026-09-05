@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Box, Button, Group, Paper, Select, Text, TextInput, Title } from '@mantine/core';
-import { logout } from '../api/API';
+import { logout } from '../api/userAPI';
 import { useNavigate } from '../router';
 
 export default function Home() {

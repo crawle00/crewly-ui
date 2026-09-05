@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Anchor, Button, Container, PasswordInput, TagsInput, Text, TextInput, Title } from '@mantine/core'
 import { useNavigate } from '../router'
-import { getCurrentUser, login, register } from '../api/API'
+import { login, register } from '../api/publicAPI'
+import { getCurrentUser } from '../api/userAPI'
 import crewlyLogo from '../assets/crewly-logo.svg'
 
 export default function Login() {
