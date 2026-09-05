@@ -37,10 +37,17 @@ export async function getUsers(params) {
   return response.data;
 }
 
+export async function deleteAccount() {
+  const response = await axios.delete(`${API_URL}/auth/me`, requestConfig);
+  return response.data;
+}
+
 export async function getUser(id) {
   const response = await axios.get(`${API_URL}/users/${id}`, requestConfig);
   return response.data;
 }
+
+
 
 export async function createClub(club) {
   const response = await axios.post(`${API_URL}/clubs`, club, requestConfig);
