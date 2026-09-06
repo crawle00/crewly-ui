@@ -1,5 +1,7 @@
-import {Accordion, Box, Title, Text, Button , Avatar , Group , Paper , Stack , Textarea} from "@mantine/core";
-import {useParams , useNavigate} from "../router";
+import {Box, Title, Text, Button , Avatar , Group , Paper , Stack , Textarea} from "@mantine/core"
+import {useParams , useNavigate} from "../router"
+import { getFaq, createFaq, createReports, getVolunteers, getListing,  } from "../api/API"
+import {useEffect , useState} from "react"
 
 //Hard code just to simulate listing being pulled.
 const fakeListings = [
@@ -26,7 +28,7 @@ const fakeRoster = [
         id: 3,
         name: "Alex Johnson"
     }
-];
+]
 
 const fakeFAQ = [
     {
@@ -41,14 +43,62 @@ const fakeFAQ = [
         question: "What should I bring?",
         answer: "Bring your laptop and anything else you normally use for IT support."
     }
-];
+]
+
 
 function Listings(){ 
-    const navigate = useNavigate();
-    const {id} = useParams();
-    const listing = fakeListings[0];
-    //const listing = fakeListings.find((job) => job.id === Number(id));
+    const navigate = useNavigate()
+
+    const {id} = useParams()
+    const [listings, setListing] = useState(null)
+    const [faq, setFaq] = useState([])
+    const [question, setQuestion] = useState("")
+    const [reports, setReports] = useState("")
+    const [volunteers, setVolunteers] = useState([])
+
+    const handleSubmitQuestion = async () => {
+        if (!question.trim()) return
+
+        const newQuestion = await createFaq(id, question)
+
+        setFaq((currentFaq) => [...currentFaq, newQuestion])
+        setQuestion("")
+    }
+
+    const handleSubmitReports = async () => {
+        if (!reports.trim()) return
+
+        const newReports = await createFaq(id, reports)
+
+        setFaq((currentFaq) => [...currentFaq, newReports])
+        setReports ("")
+    }
     
+    useEffect(() => {
+            getListing(id).then((data) => {
+                console.log(data)
+                setListing(data)
+        });
+    }, [id])
+    useEffect(() => {
+        getFaq(id).then((data) => {
+            console.log(data)
+            setFaq(data)
+        })
+    }, [id])
+    useEffect(() => {
+        getVolunteers(id).then((data) => {
+            console.log(data)
+            setVolunteers(data)
+        })
+    }, [id])
+    
+
+    if (!listings) {
+        return <Text>Loading...</Text>
+    }
+    
+    const listing = fakeListings[0]
 
     return(
         <main>
@@ -86,27 +136,38 @@ function Listings(){
 
                     <Paper withBorder p="md">
                         <Stack>
-                            {fakeRoster.map((member) => (
-                                <Group key={member.id}>
-                                    <Avatar radius="xl">{member.name.charAt(0)}</Avatar>
-                                    <Text>{member.name}</Text>
+                            {volunteers.length === 0 ? (
+                                <Text c ="dimmed">No Volunteers yet.</Text>
+                            ) : (
+                            volunteers.map((volunteer) => (
+                                <Group key={volunteer.id}>
+                                    <Avatar radius="xl">{volunteer.name.charAt(0)}</Avatar>
+                                    <Text>{volunteer.name}</Text>
                                 </Group>
-                            ))}
+                            ))
+                            )}
                         </Stack>
                     </Paper>
                 </Box>
 
                 <Box>
-                    <Title order={2} mb="md">Frequently Questions & Answers</Title>
+                    <Title order={2} mb="md">Frequently Asked Questions & Answers</Title>
                     <Paper withBorder p="md">
                         <Stack>
+                            {faq.map((item) => (
+                                <Paper>
+                                    <Text>{item.question}</Text>
+                                </Paper>
+                            ))}
                             <Textarea
                                 label="Ask a question"
                                 placeholder="Type your question here..."
                                 minRows={3}
+                                value ={question}
+                                onChange = {(event) => setQuestion(event.currentTarget.value)}
                             />
 
-                            <Button w="fit-content">
+                            <Button w="fit-content" onClick={handleSubmitQuestion}>
                                 Submit Question
                             </Button>
                         </Stack>
@@ -127,9 +188,11 @@ function Listings(){
                                 label="Feedback"
                                 placeholder="Enter your feedback here..."
                                 minRows={4}
+                                value ={reports}
+                                onChange ={(event) => setReports(event.currentTarget.value)}
                             />
 
-                            <Button w="fit-content">Submit Feedback</Button>
+                            <Button w="fit-content" onClick={handleSubmitReports}>Submit Feedback</Button>
                         </Stack>
                     </Paper>
                 </Box>
