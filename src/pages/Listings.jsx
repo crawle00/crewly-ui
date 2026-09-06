@@ -3,49 +3,6 @@ import {useParams , useNavigate} from "../router"
 import { getFaq, createFaq, createReports, getVolunteers, getListing,  } from "../api/API"
 import {useEffect , useState} from "react"
 
-//Hard code just to simulate listing being pulled.
-const fakeListings = [
-    {
-        id: 1,
-        title: "IT Help",
-        publisher: "CS Club",
-        description: "Install Steam onto PCs",
-        location: "University of Arkansas-Fort Smith | Baldor 143",
-        date: "09/02/2026 | 2:00 PM"
-    },
-
-]
-const fakeRoster = [
-    {
-        id: 1,
-        name: "John Smith"
-    },
-    {
-        id: 2,
-        name: "Jane Doe"
-    },
-    {
-        id: 3,
-        name: "Alex Johnson"
-    }
-]
-
-const fakeFAQ = [
-    {
-        question: "Where should I meet?",
-        answer: "Meet at Baldor 143 at the listed start time."
-    },
-    {
-        question: "How long will the volunteer work take?",
-        answer: "The expected time commitment is approximately two hours."
-    },
-    {
-        question: "What should I bring?",
-        answer: "Bring your laptop and anything else you normally use for IT support."
-    }
-]
-
-
 function Listings(){ 
     const navigate = useNavigate()
 
@@ -68,9 +25,7 @@ function Listings(){
     const handleSubmitReports = async () => {
         if (!reports.trim()) return
 
-        const newReports = await createFaq(id, reports)
-
-        setFaq((currentFaq) => [...currentFaq, newReports])
+        const newReports = await createReports(id, reports)
         setReports ("")
     }
     
@@ -97,8 +52,7 @@ function Listings(){
     if (!listings) {
         return <Text>Loading...</Text>
     }
-    
-    const listing = fakeListings[0]
+
 
     return(
         <main>
@@ -122,11 +76,11 @@ function Listings(){
                     style = {{border: "1px solid var(--mantine-color-blue-9)" , borderRadius: "8px"}}
                 >
 
-                    <Title order = {1}> {listing.title} </Title>
-                    <Text mt = "md"> Publisher: {listing.publisher}</Text>
-                    <Text mt = "md"> Volunteer Work: {listing.description}</Text>
-                    <Text mt = "md"> Location: {listing.location}</Text>
-                    <Text mt = "md"> Date: {listing.date}</Text>
+                    <Title order = {1}> {listings.title} </Title>
+                    <Text mt = "md"> Publisher: {listings.publisher}</Text>
+                    <Text mt = "md"> Volunteer Work: {listings.description}</Text>
+                    <Text mt = "md"> Location: {listings.location}</Text>
+                    <Text mt = "md"> Date: {listings.date}</Text>
 
                     <Button mt = "lg">Volunteer</Button>
                 </Box>
@@ -140,9 +94,9 @@ function Listings(){
                                 <Text c ="dimmed">No Volunteers yet.</Text>
                             ) : (
                             volunteers.map((volunteer) => (
-                                <Group key={volunteer.id}>
-                                    <Avatar radius="xl">{volunteer.name.charAt(0)}</Avatar>
-                                    <Text>{volunteer.name}</Text>
+                                <Group key={volunteer._id}>
+                                    <Avatar radius="xl">{volunteer.firstName.charAt(0)}</Avatar>
+                                    <Text>{volunteer.firstName} {volunteer.lastName}</Text>
                                 </Group>
                             ))
                             )}
