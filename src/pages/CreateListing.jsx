@@ -40,7 +40,7 @@ export default function CreateListing() {
   const [isRemote, setIsRemote] = useState(false)
   const [startsAt, setStartsAt] = useState('')
   const [endsAt, setEndsAt] = useState('')
-  const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')
+  const timezone = 'CDT'
   const [bannerImage, setBannerImage] = useState('')
   const [capacity, setCapacity] = useState('')
   const [tags, setTags] = useState([])
@@ -106,10 +106,6 @@ export default function CreateListing() {
       <form onSubmit={handleSubmit}>
         <Stack gap="lg">
           <Stack gap="md">
-              <Stack gap={2}>
-                <Text fw={600}>Start with the basics</Text>
-                <Text size="sm" c="dimmed">Choose the club responsible for this opportunity and give it a clear name.</Text>
-              </Stack>
               <Select
                 label="Club"
                 placeholder={isLoadingClubs ? 'Loading clubs...' : 'Choose a club'}
@@ -137,7 +133,6 @@ export default function CreateListing() {
               <TextInput label="Title" placeholder="e.g. Weekend community garden volunteer" required value={title} onChange={(event) => setTitle(event.currentTarget.value)} />
               <TextInput
                 label="Banner image URL"
-                description="Use a publicly accessible PNG URL. The current API stores the image as a string URL."
                 placeholder="https://example.com/banner.png"
                 type="url"
                 value={bannerImage}
@@ -146,10 +141,6 @@ export default function CreateListing() {
           </Stack>
 
           <Stack gap="md">
-              <Stack gap={2}>
-                <Text fw={600}>When and where</Text>
-                <Text size="sm" c="dimmed">Give volunteers enough detail to plan their time.</Text>
-              </Stack>
               <TextInput label="Location name" placeholder="e.g. Student Union, Room 204" required value={locationName} onChange={(event) => setLocationName(event.currentTarget.value)} />
               <TextInput label="Address" placeholder="Street address or campus details" value={locationAddress} onChange={(event) => setLocationAddress(event.currentTarget.value)} disabled={isRemote} />
               <Checkbox label="This opportunity is remote" checked={isRemote} onChange={(event) => setIsRemote(event.currentTarget.checked)} />
@@ -157,13 +148,12 @@ export default function CreateListing() {
                 <TextInput type="datetime-local" label="Starts" required value={startsAt} onChange={(event) => setStartsAt(event.currentTarget.value)} />
                 <TextInput type="datetime-local" label="Ends" required value={endsAt} onChange={(event) => setEndsAt(event.currentTarget.value)} />
               </SimpleGrid>
-              <TextInput label="Timezone" required value={timezone} onChange={(event) => setTimezone(event.currentTarget.value)} />
           </Stack>
 
           <Stack gap="md">
               <Textarea label="Description" placeholder="Describe the opportunity, schedule, impact, and any requirements." required minRows={6} autosize value={description} onChange={(event) => setDescription(event.currentTarget.value)} />
               <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                <TextInput type="number" min={1} label="Volunteers needed" description="Set a target number of participants, or leave blank for an open-ended opportunity." placeholder="e.g. 10" value={capacity} onChange={(event) => setCapacity(event.currentTarget.value)} />
+                <TextInput type="number" min={1} label="Volunteers needed" placeholder="e.g. 10" value={capacity} onChange={(event) => setCapacity(event.currentTarget.value)} />
               </SimpleGrid>
               <TagsInput
                 label="Tags"
