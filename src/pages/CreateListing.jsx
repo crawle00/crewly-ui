@@ -6,6 +6,7 @@ import {
   Container,
   Group,
   Image,
+  List,
   Select,
   SimpleGrid,
   Stack,
@@ -19,8 +20,52 @@ import { createListing, getManagedClubs } from '../api/API'
 import { useNavigate } from '../router'
 import defaultClubIcon from '../assets/default-club-icon.svg'
 
-function getErrorMessage(requestError) {
-  return requestError.response?.data?.error?.message || 'Unable to complete the request.'
+function getFriendlyValidationMessage(detail) {
+  const field = detail.field
+  const message = detail.message || ''
+
+  if (field === 'endsAt' || message.includes('after startsAt')) {
+    return 'Your end date must be after the start date.'
+  }
+
+  if (field === 'startsAt' || message.includes('in the future')) {
+    return 'Your start date must be in the future.'
+  }
+
+  if (field === 'title' || message.includes('title')) {
+    return 'Please add a title for your listing.'
+  }
+
+  if (field === 'description' || message.includes('description')) {
+    return 'Please add a description for your listing.'
+  }
+
+  if (field === 'location.name' || field === 'location' || message.includes('location')) {
+    return 'Please add a location name for the opportunity.'
+  }
+
+  if (field === 'contactEmail' || message.includes('email')) {
+    return 'Please enter a valid contact email.'
+  }
+
+  if (field === 'clubId' || message.includes('club')) {
+    return 'Please choose a club for this listing.'
+  }
+
+  return 'Please review the form and try again.'
+}
+
+function getErrorState(requestError) {
+  const backendError = requestError.response?.data?.error
+  const details = Array.isArray(backendError?.details) ? backendError.details : []
+  const friendlyDetails = details.length > 0
+    ? details.map(getFriendlyValidationMessage)
+    : [backendError?.message || 'Unable to complete the request.']
+
+  return {
+    summary: friendlyDetails[0] || 'Unable to complete the request.',
+    details: friendlyDetails,
+  }
 }
 
 function getEstimatedHours(startsAt, endsAt) {
@@ -47,48 +92,54 @@ export default function CreateListing() {
   const [contactEmail, setContactEmail] = useState('')
   const [isLoadingClubs, setIsLoadingClubs] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     getManagedClubs()
-      .then((response) => setClubs(response.data))
+      .then((managedClubs) => setClubs(managedClubs))
       .catch((requestError) => {
         if (requestError.response?.status === 401) return navigate('/login')
-        setError(getErrorMessage(requestError))
+        setError(getErrorState(requestError))
       })
       .finally(() => setIsLoadingClubs(false))
   }, [navigate])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    setError('')
-    if (!clubId) return setError('Choose a club before creating the listing.')
+    setError(null)
+    if (!clubId) return setError({ message: 'Choose a club before creating the listing.', summary: 'Choose a club before creating the listing.', details: [] })
     setIsSaving(true)
     try {
       const estimatedHours = getEstimatedHours(startsAt, endsAt)
+      const normalizedStartsAt = startsAt ? new Date(startsAt).toISOString() : ''
+      const normalizedEndsAt = endsAt ? new Date(endsAt).toISOString() : ''
       const listing = {
         clubId,
         title: title.trim(),
         description: description.trim(),
-        bannerImage,
+        bannerImage: bannerImage.trim() || null,
         location: {
           name: locationName.trim(),
-          address: locationAddress.trim(),
+          address: isRemote ? '' : locationAddress.trim(),
           isRemote,
         },
-        startsAt,
-        endsAt,
+        startsAt: normalizedStartsAt,
+        endsAt: normalizedEndsAt,
         timezone,
         capacity: capacity ? Number(capacity) : null,
         estimatedHours: estimatedHours ? Number(estimatedHours) : undefined,
         tags,
+        skillTags: [],
+        cause: '',
+        workType: '',
+        requirements: [],
         contactEmail: contactEmail.trim() || undefined,
       }
       await createListing(listing)
       navigate('/')
     } catch (requestError) {
       if (requestError.response?.status === 401) return navigate('/login')
-      setError(getErrorMessage(requestError))
+      setError(getErrorState(requestError))
     } finally {
       setIsSaving(false)
     }
@@ -101,7 +152,21 @@ export default function CreateListing() {
         <Text c="dimmed">Share an opportunity with the Crewly community.</Text>
       </Stack>
 
-      {error && <Alert color="red" mb="md" withCloseButton onClose={() => setError('')}>{error}</Alert>}
+      {error && (
+        <Alert color="red" mb="md" withCloseButton onClose={() => setError(null)}>
+          <Stack gap={4}>
+            <Text fw={600}>We couldn’t create this listing.</Text>
+            <Text size="sm">{error.summary}</Text>
+            {error.details.length > 1 && (
+              <List size="sm" spacing="xs" withPadding>
+                {error.details.slice(1).map((detail, index) => (
+                  <List.Item key={`${detail}-${index}`}>{detail}</List.Item>
+                ))}
+              </List>
+            )}
+          </Stack>
+        </Alert>
+      )}
 
       <form onSubmit={handleSubmit}>
         <Stack gap="lg">
