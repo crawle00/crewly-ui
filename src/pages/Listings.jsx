@@ -1,4 +1,4 @@
-import {Box, Title, Text, Button , Avatar , Group , Paper , Stack , Textarea} from "@mantine/core"
+import {Box, Title, Text, Button , Avatar , Group , Paper , Stack , Textarea , Modal , TextInput , NumberInput, Switch} from "@mantine/core"
 import {useParams , useNavigate} from "../router"
 import { getFaq, createFaq, createReports, getVolunteers, getListing, getCurrentUser, getClub , volunteerForListing } from "../api/API"
 import {useEffect , useState} from "react"
@@ -14,6 +14,17 @@ function Listings(){
     const [volunteers, setVolunteers] = useState([])
     const [currentUser, setCurrentUser] = useState(null)
     const [club, setClub] = useState(null)
+
+    //listing owner side
+    const [editOpened, setEditOpened] = useState(false)
+    const [editTitle, setEditTitle] = useState("")
+    const [editDescription, setEditDescription] = useState(false)
+    const [editLocationName, setEditLocationName] = useState("")
+    const [editLocationAddress, setEditLocationAddress] = useState("")
+    const [editIsRemote, setEditIsRemote] = useState(false)
+    const [editCapacity, setEditCapacity] = useState("")
+    const [editStartsAt, setEditStartsAt] = useState("")
+    const [editEndsAt, setEditEndsAt] = useState("")
 
    const handleSubmitQuestion = async () => {
     if (!question.trim()) return
@@ -54,6 +65,34 @@ function Listings(){
         console.log("REPORT DETAIL MESSAGE:", error.response?.data?.error?.details?.[0]?.message)
         }
     }
+
+    //listing Owner Side
+    const handleOpenEdit = () => {
+        setEditTitle(listings.title)
+        setEditDescription(listings.description)
+
+        setEditLocationName(listings.location?.name ?? "")
+        setEditLocationAddress(listings.location?.address ?? "")
+        setEditIsRemote(listings.location?.isRemote ?? false)
+
+
+        setEditCapacity(listings.capacity ?? "")
+
+        setEditStartsAt(
+        listings.startsAt
+            ? new Date(listings.startsAt).toISOString().slice(0, 16)
+            : ""
+        )
+        setEditEndsAt(
+        listings.endsAt
+            ? new Date(listings.endsAt).toISOString().slice(0, 16)
+            : ""
+        )
+
+
+        setEditOpened(true)
+    }
+
 
     useEffect(() => {
             getListing(id).then((data) => {
@@ -131,12 +170,32 @@ function Listings(){
                     <Text mt = "md"> Ends: {new Date(listings.endsAt).toLocaleString()}</Text>
 
                     <Button mt = "lg" onClick = {handleVolunteer}>Volunteer</Button>
+
                     {isOwner && (
                         <Group mt = "md">
-                            <Button>Edit Listing</Button>
+                            <Button onClick={handleOpenEdit}>Edit Listing</Button>
+                                <Modal opened={editOpened} onClose={() => setEditOpened(false)} title="Edit Listing" centered >
+                                    <TextInput label= "Title" value={editTitle} onChange={(event) => setEditTitle(event.currentTarget.value)} mb="md" />
+                                    <Textarea justify="flex-end" value={editDescription} onChange={(event) => setEditDescription(event.currentTarget.value)} />
+                                    <TextInput label= "Location" value={editLocationName} onChange={(event) => setEditLocationName(event.currentTarget.value)}mb="md" />
+                                    <TextInput label= "Address" value={editLocationAddress} onChange={(event) => setEditLocationAddress(event.currentTarget.value)}mb="md" />
+                                    <Switch label= "Remote" checked={editIsRemote} onChange={(event) => setEditIsRemote(event.currentTarget.checked)} mb="md" />
+                                    <NumberInput label= "Capacity" value={editCapacity} onChange={setEditCapacity} min={1} mb="md" />
+                                    <TextInput type="datetime-local" label="Start Time" value={editStartsAt} onChange={(event) => setEditStartsAt(event.currentTarget.value)} mb="md" />
+                                    <TextInput type="datetime-local" label="End Time" value={editEndsAt} onChange={(event) => setEditEndsAt(event.currentTarget.value)} mb="lg" />
+                                        <Group justify="flex-end">
+                                            <Button variant="default" onClick={() => setEditOpened(false)}>
+                                                cancel
+                                            </Button>
+                                            <Button>
+                                                Save Changes
+                                            </Button>
+                                        </Group>
+                                </Modal>
                             <Button>Cancel Listing</Button>
                         </Group>
                     )}
+
                 </Box>
 
                 <Box>
