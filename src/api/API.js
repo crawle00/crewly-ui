@@ -62,6 +62,11 @@ export async function getClubs(params) {
   return response.data;
 }
 
+export async function getManagedClubs() {
+  const response = await axios.get(`${API_URL}/clubs/managed`, requestConfig);
+  return response.data;
+}
+
 export async function deleteClub(id) {
   const response = await axios.delete(`${API_URL}/clubs/${id}`, requestConfig);
   return response.data;

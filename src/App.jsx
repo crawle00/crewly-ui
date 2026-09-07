@@ -8,12 +8,13 @@ import Home from './pages/Home'
 import User from './pages/User'
 import Login from './pages/Login'
 import Admin from './pages/Admin'
+import CreateListing from './pages/CreateListing'
 import NotFound from './pages/NotFound'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Home' },
   { to: '/admin', label: 'Admin' },
-  { to: '/listings/new', label: 'Add listing' },
+  { to: '/createListing', label: 'Add listing' },
 ]
 
 function AppRoutes() {
@@ -47,6 +48,7 @@ function AppRoutes() {
       <Route path="/users/:id" element={<User />} />
       <Route path="/login" element={<Login />} />
       <Route path="/admin" element={<Admin />} />
+      <Route path="/createListing" element={<CreateListing />} />
       <Route path="/404" element={<NotFound />} />
     </Routes>
   )
@@ -57,8 +59,9 @@ function AppRoutes() {
   const accountName = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Sign in'
   const isAccountActive = currentUser && pathname === accountHref
   const accountAvatar = <Avatar src={currentUser?.pfp} radius="xl" size={32} color="blue" />
+  const navItems = NAV_ITEMS.filter(({ to }) => to !== '/admin' || currentUser?.isAdmin)
 
-  const navLinks = NAV_ITEMS.map(({ to, label }) => (
+  const navLinks = navItems.map(({ to, label }) => (
     <Anchor
       key={to}
       component={Link}
