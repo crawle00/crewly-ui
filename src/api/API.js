@@ -62,6 +62,12 @@ export async function getClubs(params) {
   return response.data;
 }
 
+export async function getClub(id) {
+  const response = await axios.get(
+    `${API_URL}/clubs/${id}`,
+    requestConfig
+  )
+  return response.data
 export async function getManagedClubs() {
   const response = await axios.get(`${API_URL}/clubs/managed`, requestConfig);
   return response.data;
@@ -127,17 +133,29 @@ export async function getFaq(listingId) {
   return response.data
 }
 
-export async function createFaq(listingId , question) {
-  const response = await axios.post(`${API_URL}/faq`, listingId , question , requestConfig)
+
+export async function createFaq(listingId, question) {
+  const response = await axios.post(`${API_URL}/faq`, {listingId , question,},requestConfig
+  )
+
   return response.data
 }
 
 export async function createReports(listingId , reports) {
-  const response = await axios.post(`${API_URL}/faq`, listingId , reports , requestConfig)
+  const response = await axios.post(`${API_URL}/reports`, {listingId , reports} , requestConfig)
   return response.data
 }
 
 export async function getVolunteers(listingId) {
-  const response = await axios.get(`${API_URL}/volunteers/${listingId}` , requestConfig)
+  const response = await axios.get(`${API_URL}/jobs/listing/${listingId}/volunteers` , requestConfig)
+  return response.data
+}
+
+export async function volunteerForListing(listingId) {
+  const response = await axios.post(
+    `${API_URL}/jobs/listing/${listingId}/volunteers`,
+    null,
+    requestConfig
+  )
   return response.data
 }

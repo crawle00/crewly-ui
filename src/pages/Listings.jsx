@@ -1,6 +1,6 @@
 import {Box, Title, Text, Button , Avatar , Group , Paper , Stack , Textarea} from "@mantine/core"
 import {useParams , useNavigate} from "../router"
-import { getFaq, createFaq, createReports, getVolunteers, getListing,  } from "../api/API"
+import { getFaq, createFaq, createReports, getVolunteers, getListing, getCurrentUser, getClub , volunteerForListing } from "../api/API"
 import {useEffect , useState} from "react"
 
 function Listings(){ 
@@ -12,42 +12,89 @@ function Listings(){
     const [question, setQuestion] = useState("")
     const [reports, setReports] = useState("")
     const [volunteers, setVolunteers] = useState([])
+    const [currentUser, setCurrentUser] = useState(null)
+    const [club, setClub] = useState(null)
 
-    const handleSubmitQuestion = async () => {
-        if (!question.trim()) return
+   const handleSubmitQuestion = async () => {
+    if (!question.trim()) return
 
+    try {
         const newQuestion = await createFaq(id, question)
 
         setFaq((currentFaq) => [...currentFaq, newQuestion])
         setQuestion("")
+    } catch (error) {
+        console.log("FAQ STATUS:", error.response?.status)
+        console.log("FAQ CODE:", error.response?.data?.error?.code)
+        console.log("FAQ MESSAGE:", error.response?.data?.error?.message)
+        console.log("FAQ FIELD:", error.response?.data?.error?.details?.[0]?.field)
+        console.log("FAQ DETAIL MESSAGE:", error.response?.data?.error?.details?.[0]?.message)
+        }
+    }
+
+    const handleVolunteer = async () => {
+        const updatedListing = await volunteerForListing(id)
+        setListing(updatedListing)
+
+        const updatedVolunteers = await getVolunteers(id)
+        setVolunteers(updatedVolunteers)
     }
 
     const handleSubmitReports = async () => {
-        if (!reports.trim()) return
+    if (!reports.trim()) return
 
-        const newReports = await createReports(id, reports)
-        setReports ("")
+    try {
+        await createReports(id, reports)
+        setReports("")
+    } catch (error) {
+        console.log("REPORT STATUS:", error.response?.status)
+        console.log("REPORT CODE:", error.response?.data?.error?.code)
+        console.log("REPORT MESSAGE:", error.response?.data?.error?.message)
+        console.log("REPORT FIELD:", error.response?.data?.error?.details?.[0]?.field)
+        console.log("REPORT DETAIL MESSAGE:", error.response?.data?.error?.details?.[0]?.message)
+        }
     }
-    
+
     useEffect(() => {
             getListing(id).then((data) => {
-                console.log(data)
+                //console.log(data)
                 setListing(data)
         });
     }, [id])
     useEffect(() => {
         getFaq(id).then((data) => {
-            console.log(data)
+            //console.log(data)
             setFaq(data)
         })
     }, [id])
     useEffect(() => {
         getVolunteers(id).then((data) => {
-            console.log(data)
+            //console.log(data)
             setVolunteers(data)
         })
     }, [id])
+    useEffect(() => {
+        getCurrentUser().then((data) => {
+            //console.log(data)
+            setCurrentUser(data)
+        })
+    }, [])
+    useEffect(() => {
+        if (!listings) return
+        getClub(listings.clubId).then((data) => {
+                //console.log("CLUB DATA", data)
+                setClub(data)
+        })
+        .catch((error) => {
+            console.log("CLUB ERROR:", error.response?.status, error.response?.data)
+        })
+    }, [listings])
+
     
+    const isOwner =
+        currentUser &&
+        listings &&
+        String(currentUser._id) === String(listings.createdBy)
 
     if (!listings) {
         return <Text>Loading...</Text>
@@ -77,12 +124,19 @@ function Listings(){
                 >
 
                     <Title order = {1}> {listings.title} </Title>
-                    <Text mt = "md"> Publisher: {listings.publisher}</Text>
+                    <Text mt = "md"> Club: {club ? club.name : "Loading"}</Text>
                     <Text mt = "md"> Volunteer Work: {listings.description}</Text>
-                    <Text mt = "md"> Location: {listings.location}</Text>
-                    <Text mt = "md"> Date: {listings.date}</Text>
+                    <Text mt = "md"> Location: {listings.location.name}</Text>
+                    <Text mt = "md"> Date: {new Date(listings.startsAt).toLocaleString()}</Text>
+                    <Text mt = "md"> Ends: {new Date(listings.endsAt).toLocaleString()}</Text>
 
-                    <Button mt = "lg">Volunteer</Button>
+                    <Button mt = "lg" onClick = {handleVolunteer}>Volunteer</Button>
+                    {isOwner && (
+                        <Group mt = "md">
+                            <Button>Edit Listing</Button>
+                            <Button>Cancel Listing</Button>
+                        </Group>
+                    )}
                 </Box>
 
                 <Box>
@@ -109,8 +163,9 @@ function Listings(){
                     <Paper withBorder p="md">
                         <Stack>
                             {faq.map((item) => (
-                                <Paper>
-                                    <Text>{item.question}</Text>
+                                <Paper key = {item.id} withBorder p ="md" radius = "md">
+                                    <Text fw={700}>{item.question}</Text>
+                                    <Text size = "sm" c = "dimmed">Asked by {item.firstName} {item.lastName}</Text>
                                 </Paper>
                             ))}
                             <Textarea
