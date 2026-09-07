@@ -9,6 +9,7 @@ import User from './pages/User'
 import Login from './pages/Login'
 import Admin from './pages/Admin'
 import NotFound from './pages/NotFound'
+import Listings from './pages/Listings'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Home' },
@@ -48,6 +49,7 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/admin" element={<Admin />} />
       <Route path="/404" element={<NotFound />} />
+      <Route path="/Listings/:id" element={<Listings />} />
     </Routes>
   )
 

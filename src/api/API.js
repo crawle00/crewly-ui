@@ -116,3 +116,23 @@ export async function ping() {
   const response = await axios.get("/ping", requestConfig);
   return response.data;
 }
+
+export async function getFaq(listingId) {
+  const response = await axios.get(`${API_URL}/faq/${listingId}` , requestConfig)
+  return response.data
+}
+
+export async function createFaq(listingId , question) {
+  const response = await axios.post(`${API_URL}/faq`, listingId , question , requestConfig)
+  return response.data
+}
+
+export async function createReports(listingId , reports) {
+  const response = await axios.post(`${API_URL}/faq`, listingId , reports , requestConfig)
+  return response.data
+}
+
+export async function getVolunteers(listingId) {
+  const response = await axios.get(`${API_URL}/volunteers/${listingId}` , requestConfig)
+  return response.data
+}

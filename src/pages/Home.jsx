@@ -47,7 +47,7 @@ export default function Home() {
           <Paper
             key={i}
             className="listing-card"
-            onClick={() => navigate(`/listings/${i + 1}`)}
+            onClick={() => navigate(`/Listings/${i + 1}`)}
             withBorder
             p="lg"
             shadow="sm"
