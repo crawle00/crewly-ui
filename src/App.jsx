@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Anchor, AppShell, Avatar, Box, Burger, Drawer, Group, Image, Stack, Text } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { BrowserRouter, Routes, Route, Link, useLocation } from './router'
+import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from './router'
 import { getCurrentUser } from './api/API'
 import crewlyLogoLight from './assets/crewly-logo-light.svg'
 import Home from './pages/Home'
@@ -28,6 +28,15 @@ function AppRoutes() {
     closeMenu()
   }, [pathname, closeMenu])
 
+  function ListingsRedirect() {
+    const navigate = useNavigate()
+
+    useEffect(() => {
+      navigate("/")
+    }, [navigate])
+    return null
+  }
+
   useEffect(() => {
     let isMounted = true
     getCurrentUser()
@@ -51,7 +60,8 @@ function AppRoutes() {
       <Route path="/admin" element={<Admin />} />
       <Route path="/createListing" element={<CreateListing />} />
       <Route path="/404" element={<NotFound />} />
-      <Route path="/Listings/:id" element={<Listings />} />
+      <Route path="/listings" element={<ListingsRedirect />} />
+      <Route path="/listings/:id" element={<Listings />} />
     </Routes>
   )
 

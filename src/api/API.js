@@ -148,6 +148,11 @@ export async function createReports(listingId , reports) {
   return response.data
 }
 
+export async function getReports(listingId) {
+    const response = await axios.get(`${API_URL}/reports/${listingId}`, requestConfig)
+    return response.data
+}
+
 export async function getVolunteers(listingId) {
   const response = await axios.get(`${API_URL}/jobs/listing/${listingId}/volunteers` , requestConfig)
   return response.data
