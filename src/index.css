@@ -12,6 +12,85 @@ body {
   min-height: 100vh;
 }
 
+.site-header {
+  border-bottom: 1px solid color-mix(in srgb, var(--mantine-color-blue-7) 65%, transparent);
+  box-shadow: 0 4px 14px rgb(8 47 73 / 12%);
+}
+
+.site-brand,
+.site-mobile-account {
+  display: flex;
+  align-items: center;
+}
+
+.site-brand {
+  transition: opacity 160ms ease;
+}
+
+.site-brand:hover {
+  opacity: 0.86;
+}
+
+.site-nav-link {
+  display: inline-flex;
+  position: relative;
+  min-height: 40px;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 4px;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.site-nav-link:hover {
+  background-color: rgb(255 255 255 / 8%);
+}
+
+.site-nav-link::after {
+  position: absolute;
+  right: 10px;
+  bottom: 0;
+  left: 10px;
+  height: 3px;
+  content: '';
+  background: white;
+  opacity: 0;
+  transform: scaleX(0.45);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.site-nav-link[aria-current='page']::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.site-account-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-radius: 999px;
+  transition: background-color 160ms ease;
+}
+
+.site-account-link:hover {
+  background-color: rgb(255 255 255 / 10%);
+}
+
+.site-desktop-nav .mantine-Avatar-root,
+.site-mobile-account .mantine-Avatar-root {
+  border: 2px solid rgb(255 255 255 / 68%);
+}
+
+.site-menu-button {
+  border-radius: 4px;
+}
+
+@media (max-width: 767px) {
+  .site-header {
+    box-shadow: 0 3px 12px rgb(8 47 73 / 16%);
+  }
+}
+
 .login-shell {
   min-height: 100svh;
   overflow: hidden;
@@ -47,29 +126,3 @@ body {
   }
 }
 
-.sidebar-logo {
-  display: block;
-  margin-right: auto;
-  margin-left: auto;
-}
-
-.sidebar-link {
-  color: #dbeafe;
-  border-radius: var(--mantine-radius-sm);
-}
-
-.sidebar-link:hover {
-  color: var(--mantine-color-blue-9);
-  background-color: var(--mantine-color-blue-1);
-}
-
-.sidebar-link[data-active] {
-  color: var(--mantine-color-blue-9);
-  background-color: var(--mantine-color-blue-2);
-}
-
-.sidebar-link .mantine-NavLink-label,
-.sidebar-link .mantine-NavLink-description,
-.sidebar-link .mantine-NavLink-section {
-  color: inherit;
-}

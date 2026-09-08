@@ -1,11 +1,10 @@
-import {Box, Title, Text, Button , Avatar , Group , Paper , Stack , Textarea , Modal , TextInput , NumberInput, Switch} from "@mantine/core"
+import {Box, Title, Text, Button , Avatar , Group , Paper , Stack , Textarea , Modal , TextInput , NumberInput , Switch , Drawer , ScrollArea , Divider} from "@mantine/core"
 import {useParams , useNavigate} from "../router"
-import { getFaq, createFaq, createReports, getVolunteers, getListing, getCurrentUser, getClub , volunteerForListing } from "../api/API"
+import { getFaq, createFaq, createReports, getVolunteers, getListing, getCurrentUser, getClub , volunteerForListing, updateListing , getReports } from "../api/API"
 import {useEffect , useState} from "react"
 
 function Listings(){ 
     const navigate = useNavigate()
-
     const {id} = useParams()
     const [listings, setListing] = useState(null)
     const [faq, setFaq] = useState([])
@@ -14,6 +13,9 @@ function Listings(){
     const [volunteers, setVolunteers] = useState([])
     const [currentUser, setCurrentUser] = useState(null)
     const [club, setClub] = useState(null)
+    const [rosterOpened, setRosterOpened] = useState(false)
+    const [viewReportOpened, setViewReportOpened] = useState(false);
+    const [loading, setLoading] = useState(true)
 
     //listing owner side
     const [editOpened, setEditOpened] = useState(false)
@@ -25,6 +27,8 @@ function Listings(){
     const [editCapacity, setEditCapacity] = useState("")
     const [editStartsAt, setEditStartsAt] = useState("")
     const [editEndsAt, setEditEndsAt] = useState("")
+    const [reportsOpened, setReportsOpened] = useState(false);
+    const [listingReports, setListingReports] = useState("")
 
    const handleSubmitQuestion = async () => {
     if (!question.trim()) return
@@ -35,11 +39,7 @@ function Listings(){
         setFaq((currentFaq) => [...currentFaq, newQuestion])
         setQuestion("")
     } catch (error) {
-        console.log("FAQ STATUS:", error.response?.status)
-        console.log("FAQ CODE:", error.response?.data?.error?.code)
-        console.log("FAQ MESSAGE:", error.response?.data?.error?.message)
-        console.log("FAQ FIELD:", error.response?.data?.error?.details?.[0]?.field)
-        console.log("FAQ DETAIL MESSAGE:", error.response?.data?.error?.details?.[0]?.message)
+        console.error("UPDATE LISTING ERROR:", error.response?.data || error)
         }
     }
 
@@ -58,11 +58,7 @@ function Listings(){
         await createReports(id, reports)
         setReports("")
     } catch (error) {
-        console.log("REPORT STATUS:", error.response?.status)
-        console.log("REPORT CODE:", error.response?.data?.error?.code)
-        console.log("REPORT MESSAGE:", error.response?.data?.error?.message)
-        console.log("REPORT FIELD:", error.response?.data?.error?.details?.[0]?.field)
-        console.log("REPORT DETAIL MESSAGE:", error.response?.data?.error?.details?.[0]?.message)
+        console.error("UPDATE LISTING ERROR:", error.response?.data || error)
         }
     }
 
@@ -88,40 +84,88 @@ function Listings(){
             ? new Date(listings.endsAt).toISOString().slice(0, 16)
             : ""
         )
-
-
         setEditOpened(true)
+    }
+
+    const handleSaveEdit = async () => {
+        const updates = {
+            title: editTitle,
+            description: editDescription,
+            location: {
+                name: editLocationName,
+                address: editLocationAddress,
+                isRemote: editIsRemote,
+            },
+            capacity: editCapacity === "" ? null : Number(editCapacity),
+            startsAt: new Date(editStartsAt),
+            endsAt: new Date(editEndsAt),
+        }
+
+        try {
+            const updatedListing = await updateListing(id, updates)
+
+            setListing(updatedListing)
+            setEditOpened(false)
+        } catch (error) {
+            console.error("UPDATE LISTING ERROR:", error.response?.data || error)
+        }
+    }
+
+    const handleCancelListing = async () => {
+        try {
+            const updatedListing = await updateListing(id, {
+                isCancelled: true
+            })
+
+        setListing(updatedListing)
+        } catch (error) {
+            console.error(
+                "CANCEL LISTING ERROR:",
+                error.response?.data || error
+            )
+        }
+    }   
+
+    const handleOpenReports = async () => {
+    try {
+            const data = await getReports(id);
+            setListingReports(data);
+            setReportsOpened(true);
+        } catch (error) {
+            console.error("GET REPORTS ERROR:", error.response?.data || error);
+        }
     }
 
 
     useEffect(() => {
             getListing(id).then((data) => {
-                //console.log(data)
                 setListing(data)
-        });
+        })
+        .catch((error) =>{
+            console.log("GET LISTING ERROR:" , error.response?.status, error.response?.data)
+        })
+        .finally(() => {
+            setLoading(false)
+        })
     }, [id])
     useEffect(() => {
         getFaq(id).then((data) => {
-            //console.log(data)
             setFaq(data)
         })
     }, [id])
     useEffect(() => {
         getVolunteers(id).then((data) => {
-            //console.log(data)
             setVolunteers(data)
         })
     }, [id])
     useEffect(() => {
         getCurrentUser().then((data) => {
-            //console.log(data)
             setCurrentUser(data)
         })
     }, [])
     useEffect(() => {
         if (!listings) return
         getClub(listings.clubId).then((data) => {
-                //console.log("CLUB DATA", data)
                 setClub(data)
         })
         .catch((error) => {
@@ -136,43 +180,30 @@ function Listings(){
         String(currentUser._id) === String(listings.createdBy)
 
     if (!listings) {
-        return <Text>Loading...</Text>
+        return (
+            <Stack align = "center" justify = "center" mih = "100vh">
+                <Title order ={2}>Looks like this listing isn't available right now.</Title>
+                <Button onClick={() => navigate("/")}>View Other Listings</Button>
+            </Stack>
+        )
     }
 
 
     return(
-        <main>
+        <Box>
 
-            <Group justify = "flex-end">
+            <Group justify = "flex-start">
                 <Button
                     variant = "subtle"
                     onClick = {() => navigate("/")}
+                    size="lg"
                 >
                     Back to Listings
                 </Button>
             </Group>
 
-            <Stack gap = "x1">
-                
-                <Box
-                    mt = "lg"
-                    p = "lg"
-                    w = "100%"
-                    mx = "auto"
-                    style = {{border: "1px solid var(--mantine-color-blue-9)" , borderRadius: "8px"}}
-                >
-
-                    <Title order = {1}> {listings.title} </Title>
-                    <Text mt = "md"> Club: {club ? club.name : "Loading"}</Text>
-                    <Text mt = "md"> Volunteer Work: {listings.description}</Text>
-                    <Text mt = "md"> Location: {listings.location.name}</Text>
-                    <Text mt = "md"> Date: {new Date(listings.startsAt).toLocaleString()}</Text>
-                    <Text mt = "md"> Ends: {new Date(listings.endsAt).toLocaleString()}</Text>
-
-                    <Button mt = "lg" onClick = {handleVolunteer}>Volunteer</Button>
-
-                    {isOwner && (
-                        <Group mt = "md">
+            {isOwner && (
+                        <Group justify = "flex-end" mt = "md" px="md">
                             <Button onClick={handleOpenEdit}>Edit Listing</Button>
                                 <Modal opened={editOpened} onClose={() => setEditOpened(false)} title="Edit Listing" centered >
                                     <TextInput label= "Title" value={editTitle} onChange={(event) => setEditTitle(event.currentTarget.value)} mb="md" />
@@ -183,90 +214,182 @@ function Listings(){
                                     <NumberInput label= "Capacity" value={editCapacity} onChange={setEditCapacity} min={1} mb="md" />
                                     <TextInput type="datetime-local" label="Start Time" value={editStartsAt} onChange={(event) => setEditStartsAt(event.currentTarget.value)} mb="md" />
                                     <TextInput type="datetime-local" label="End Time" value={editEndsAt} onChange={(event) => setEditEndsAt(event.currentTarget.value)} mb="lg" />
-                                        <Group justify="flex-end">
-                                            <Button variant="default" onClick={() => setEditOpened(false)}>
-                                                cancel
-                                            </Button>
-                                            <Button>
-                                                Save Changes
-                                            </Button>
-                                        </Group>
+                                    <Group justify="flex-end">
+                                        <Button variant="default" onClick={() => setEditOpened(false)}>cancel</Button>
+                                        <Button onClick={handleSaveEdit}>Save Changes</Button>
+                                    </Group>
                                 </Modal>
-                            <Button>Cancel Listing</Button>
+                            <Button color ="red" onClick={handleCancelListing}>Cancel Listing</Button>
                         </Group>
                     )}
 
+            <Stack gap = "x1">
+                <Box
+                    mt = "lg"
+                    p = "lg"
+                    w = "60%"
+                    mx = "auto"
+                    bg = "#fafafa"
+                    style = {{border: "1px solid var(--mantine-color-blue-9)" , borderRadius: "8px" , textAlign: "center"}}  
+                >
+                    <Group justify="center" mb="md">
+                        <Text fw={700}>
+                            {club ? club.name : "Loading"}
+                        </Text>
+                    </Group>   
+                    <Title order = {1}> {listings.title} </Title>
+                    <Text mt = "md"> <Text span fw ={700}>Volunteer Work:</Text> {listings.description}</Text>
+                    <Text mt = "md"> <Text span fw ={700}>Location:</Text> {listings.location.name}</Text>
+                    <Text mt = "md"> <Text span fw ={700}>Date:</Text> {new Date(listings.startsAt).toLocaleString("en-US", {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit"
+                    })}
+                    </Text>
+                    <Text mt = "md"> <Text span fw ={700}>End Time:</Text> {new Date(listings.endsAt).toLocaleString("en-US", {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit"
+                    })}
+                    </Text>
+
+                    <Group justify="center" mt="lg" gap="x1">
+                        <Button mt = "lg" onClick = {handleVolunteer}>Volunteer</Button>
+                        <Button mt = "lg" variant = "light" onClick={() => setRosterOpened(true)}>View Volunteer Roster</Button>
+                    </Group>
+                    
+                    <Group justify="center" mt="md">
+                        {!isOwner ? (
+                            <Button variant="light" onClick={() => setViewReportOpened(true)}>
+                                Submit a report or Feedback
+                            </Button>
+                        ) : (
+                            <Button color = "red" onClick={handleOpenReports}>
+                                View Reports & Feedback
+                            </Button>
+                        )}
+                    </Group>
+
+                    {!isOwner && (
+                        <Modal opened={viewReportOpened} onClose={() => setViewReportOpened(false)} title="Report Listing" centered>
+                            <Stack>
+                                <Text>
+                                    Have some feedback for this listing? Submit your feedback here.
+                                </Text>
+
+                                <Textarea
+                                    label="Report"
+                                    placeholder="Describe your concern..."
+                                    minRows={5}
+                                    value={reports}
+                                    onChange={(event) => setReports(event.currentTarget.value)}
+                                />
+
+                                <Group justify="flex-end">
+                                    <Button variant="default" onClick={() => setViewReportOpened(false)} > Cancel </Button>
+
+                                    <Button color="red"onClick={handleSubmitReports}> Submit Report </Button>
+                                </Group>
+                            </Stack>
+                        </Modal>
+                    )}
+                    {isOwner && (
+                        <Modal opened={reportsOpened} onClose={() => setReportsOpened(false)} title="Listing Reports" centered >
+                            <ScrollArea h={400}>
+                                <Stack>
+                                    {listingReports.length === 0 ? (
+                                        <Text c="dimmed">
+                                            No reports have been submitted.
+                                        </Text>
+                                    ) : (
+                                        listingReports.map((report) => (
+                                            <Paper
+                                                key={report._id} withBorder p="md"  radius="md" >
+                                                <Text>{report.reports}</Text>
+                                                <Text size="sm" c="dimmed" mt="xs" > By {report.firstName}{" "}{report.lastName}</Text>
+                                            </Paper>
+                                        ))
+                                    )}
+                                </Stack>
+                            </ScrollArea>
+                        </Modal>
+                    )}
                 </Box>
 
-                <Box>
-                    <Title order={2} mb="md">Volunteer Roster</Title>
+                <Drawer
+                    opened={rosterOpened}
+                    onClose={() => setRosterOpened(false)}
+                    title="Volunteer Roster"
+                    position="right"
+                >
+                    <Text size = "sm" c = "dimmed" mb = "md">{volunteers.length} / {listings.capacity ?? "∞"} volunteers</Text>
 
-                    <Paper withBorder p="md">
-                        <Stack>
-                            {volunteers.length === 0 ? (
-                                <Text c ="dimmed">No Volunteers yet.</Text>
-                            ) : (
+                    <Stack>
+                        {volunteers.length === 0 ? (
+                            <Text c = "dimmed">No Volunteers Yet</Text>
+                        ) : (
                             volunteers.map((volunteer) => (
-                                <Group key={volunteer._id}>
-                                    <Avatar radius="xl">{volunteer.firstName.charAt(0)}</Avatar>
-                                    <Text>{volunteer.firstName} {volunteer.lastName}</Text>
+                                <Group key = {volunteer._id}>
+                                    <Paper key ={volunteer._id} withBorder p ="sm" radius = "md" w ="100%" bd="1px solid var(--mantine-color-gray-4)">
+                                        <Avatar radius = "x1">
+                                            {volunteer.firstName.charAt(0) || "?"}
+                                        </Avatar>
+                                        <Text>{volunteer.firstName} {volunteer.lastName}</Text>
+                                    </Paper>
                                 </Group>
                             ))
-                            )}
-                        </Stack>
-                    </Paper>
-                </Box>
+                        )}
+                    </Stack>
+                </Drawer>
 
-                <Box>
+                <Box
+                    mt = "lg"
+                    p = "lg"
+                    w = "60%"
+                    mx = "auto"
+                    bg = "#fafafa"
+                    style = {{border: "1px solid var(--mantine-color-blue-9)" , borderRadius: "8px" , textAlign: "center"}}
+                >
                     <Title order={2} mb="md">Frequently Asked Questions & Answers</Title>
-                    <Paper withBorder p="md">
-                        <Stack>
-                            {faq.map((item) => (
-                                <Paper key = {item.id} withBorder p ="md" radius = "md">
-                                    <Text fw={700}>{item.question}</Text>
-                                    <Text size = "sm" c = "dimmed">Asked by {item.firstName} {item.lastName}</Text>
-                                </Paper>
-                            ))}
-                            <Textarea
-                                label="Ask a question"
-                                placeholder="Type your question here..."
-                                minRows={3}
-                                value ={question}
-                                onChange = {(event) => setQuestion(event.currentTarget.value)}
-                            />
+                    <Stack>
+                        <Title order={4}>Ask a Question</Title>
+                        <Textarea
+                            placeholder="Type your question here..."
+                            minRows={5}
+                            value={question}
+                            onChange={(event) =>setQuestion(event.currentTarget.value)}
+                        />
+                        <Group justify="flex-end">                          
+                            <Button w="fit-content" onClick={handleSubmitQuestion}>Submit Question</Button>
+                        </Group>      
+                    </Stack>
 
-                            <Button w="fit-content" onClick={handleSubmitQuestion}>
-                                Submit Question
-                            </Button>
-                        </Stack>
-                    </Paper>
+                    <Divider my="lg"/>
+
+                    <Title order={4} ta="left" mb="md">
+                        Submitted Questions
+                    </Title>
+                        <ScrollArea h={200}>
+                                <Stack>
+                                    {faq.length === 0 ? (
+                                        <Text c="dimmed">No questions have been submitted yet.</Text>
+                                    ) : (
+                                        faq.map((item) => (
+                                            <Paper key={item.id} withBorder p="md" radius="md">
+                                                <Text fw={700}> {item.question} </Text>
+                                                <Text size="sm" c="dimmed" mt="xs"> Asked by {item.firstName} {" "} {item.lastName}</Text>
+                                            </Paper>
+                                        ))
+                                    )}
+                                </Stack>
+                        </ScrollArea>
                 </Box>
-
-                <Box>
-                    <Title order={2} mb="md">Reports & Feedback</Title>
-
-                    <Paper withBorder p="md">
-                        <Stack>
-                            <Text>
-                                Have feedback about this listing or the volunteer
-                                experience? Let the publisher know.
-                            </Text>
-
-                            <Textarea
-                                label="Feedback"
-                                placeholder="Enter your feedback here..."
-                                minRows={4}
-                                value ={reports}
-                                onChange ={(event) => setReports(event.currentTarget.value)}
-                            />
-
-                            <Button w="fit-content" onClick={handleSubmitReports}>Submit Feedback</Button>
-                        </Stack>
-                    </Paper>
-                </Box>
-            </Stack>
-                
-        </main>
+            </Stack>    
+        </Box>
     )
 }
 

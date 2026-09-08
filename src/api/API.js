@@ -70,6 +70,11 @@ export async function getClub(id) {
   return response.data
 }
 
+export async function getManagedClubs() {
+  const response = await axios.get(`${API_URL}/clubs/managed`, requestConfig);
+  return response.data.data ?? response.data;
+}
+
 export async function deleteClub(id) {
   const response = await axios.delete(`${API_URL}/clubs/${id}`, requestConfig);
   return response.data;
@@ -141,6 +146,11 @@ export async function createFaq(listingId, question) {
 export async function createReports(listingId , reports) {
   const response = await axios.post(`${API_URL}/reports`, {listingId , reports} , requestConfig)
   return response.data
+}
+
+export async function getReports(listingId) {
+    const response = await axios.get(`${API_URL}/reports/${listingId}`, requestConfig)
+    return response.data
 }
 
 export async function getVolunteers(listingId) {
