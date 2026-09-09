@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Alert, Avatar, Badge, Box, Button, Container, Divider, Group, Modal, Paper, PasswordInput, SimpleGrid, Stack, TagsInput, Text, TextInput, Textarea, Title, UnstyledButton } from '@mantine/core'
+import { ActionIcon, Alert, Avatar, Badge, Box, Button, Container, Divider, Group, Modal, Paper, PasswordInput, SimpleGrid, Stack, TagsInput, Text, TextInput, Textarea, Title, UnstyledButton } from '@mantine/core'
 import { useParams, useNavigate } from '../router'
-import { deleteAccount, getCurrentUser, getUser, updateCurrentUser } from '../api/API'
+import { deleteAccount, getCurrentUser, getUser, logout, updateCurrentUser } from '../api/API'
 
 function getErrorMessage(requestError) {
   return requestError.response?.data?.error?.message || 'Unable to complete the request.'
@@ -19,10 +19,20 @@ export default function User() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [bio, setBio] = useState('')
   const [interests, setInterests] = useState([])
   const [isSaving, setIsSaving] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  const [editing, setEditing] = useState({
+    firstName: false,
+    lastName: false,
+    email: false,
+    bio: false,
+    interests: false,
+  })
+  const startEditing = (field) => setEditing((prev) => ({ ...prev, [field]: true }))
+  const resetEditing = () => setEditing({ firstName: false, lastName: false, email: false, bio: false, interests: false })
 
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -30,6 +40,12 @@ export default function User() {
   const [isPfpOpen, setIsPfpOpen] = useState(false)
   const [pfpDraft, setPfpDraft] = useState('')
   const [isSavingPfp, setIsSavingPfp] = useState(false)
+
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [isSavingPassword, setIsSavingPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
 
   useEffect(() => {
     let isMounted = true
@@ -72,16 +88,25 @@ export default function User() {
     setSuccessMessage('')
     try {
       const updates = { firstName, lastName, email, bio, interests }
-      if (password) updates.password = password
       const updatedUser = await updateCurrentUser(updates)
       setCurrentUser(updatedUser)
       setProfileUser(updatedUser)
-      setPassword('')
+      resetEditing()
       setSuccessMessage('Your changes have been saved.')
     } catch (requestError) {
       setError(getErrorMessage(requestError))
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+    try {
+      await logout()
+      navigate('/login')
+    } finally {
+      setIsLoggingOut(false)
     }
   }
 
@@ -104,6 +129,27 @@ export default function User() {
       setError(getErrorMessage(requestError))
     } finally {
       setIsSavingPfp(false)
+    }
+  }
+
+  const openPasswordModal = () => {
+    setCurrentPassword('')
+    setNewPassword('')
+    setPasswordError('')
+    setIsPasswordOpen(true)
+  }
+
+  const handleChangePassword = async () => {
+    setIsSavingPassword(true)
+    setPasswordError('')
+    try {
+      await updateCurrentUser({ currentPassword, password: newPassword })
+      await logout()
+      navigate('/login')
+    } catch (requestError) {
+      setPasswordError(getErrorMessage(requestError))
+    } finally {
+      setIsSavingPassword(false)
     }
   }
 
@@ -134,13 +180,27 @@ export default function User() {
   return (
     <Box p="xl">
       <Container size={640} px={0}>
-        <Box
-          style={{
-            height: 132,
-            borderRadius: 'var(--mantine-radius-md)',
-            background: 'linear-gradient(135deg, var(--mantine-color-blue-9), var(--mantine-color-blue-6))',
-          }}
-        />
+        <Box style={{ position: 'relative' }}>
+          <Box
+            style={{
+              height: 132,
+              borderRadius: 'var(--mantine-radius-md)',
+              background: 'linear-gradient(135deg, var(--mantine-color-blue-9), var(--mantine-color-blue-6))',
+            }}
+          />
+          {isOwnProfile && (
+            <Button
+              variant="white"
+              color="blue"
+              size="xs"
+              onClick={handleLogout}
+              loading={isLoggingOut}
+              style={{ position: 'absolute', top: 12, right: 12 }}
+            >
+              Log out
+            </Button>
+          )}
+        </Box>
         <Stack align="center" gap={2} mt={-46} mb="xl">
           {isOwnProfile ? (
             <UnstyledButton
@@ -205,58 +265,127 @@ export default function User() {
           <Stack gap="lg">
             <Paper withBorder radius="md" p="xl">
               <form onSubmit={handleSave}>
-                <Stack gap="lg">
-                  <Stack gap="md">
-                    <Title order={5}>Profile details</Title>
-                    <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                      <TextInput
-                        label="First name"
-                        required
-                        value={firstName}
-                        onChange={(event) => setFirstName(event.currentTarget.value)}
-                      />
-                      <TextInput
-                        label="Last name"
-                        required
-                        value={lastName}
-                        onChange={(event) => setLastName(event.currentTarget.value)}
-                      />
-                    </SimpleGrid>
-                    <TextInput
-                      label="Email"
-                      required
-                      value={email}
-                      onChange={(event) => setEmail(event.currentTarget.value)}
-                    />
-                    <Textarea
-                      label="Bio"
-                      placeholder="Tell others a bit about yourself"
-                      minRows={3}
-                      autosize
-                      value={bio}
-                      onChange={(event) => setBio(event.currentTarget.value)}
-                    />
-                    <TagsInput
-                      label="Interests"
-                      placeholder={interests.length < 5 ? 'Add an interest' : undefined}
-                      description="Add up to 5 interests"
-                      maxTags={5}
-                      value={interests}
-                      onChange={setInterests}
-                    />
-                  </Stack>
+                <Stack gap="md">
+                  <Title order={5}>Profile details</Title>
 
-                  <Divider />
+                  <SimpleGrid cols={{ base: 1, sm: 2 }}>
+                    <Box>
+                      <Group justify="space-between" mb={4}>
+                        <Text size="sm" fw={500}>First name</Text>
+                        {!editing.firstName && (
+                          <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => startEditing('firstName')} aria-label="Edit first name">
+                            ✎
+                          </ActionIcon>
+                        )}
+                      </Group>
+                      {editing.firstName ? (
+                        <TextInput
+                          required
+                          value={firstName}
+                          onChange={(event) => setFirstName(event.currentTarget.value)}
+                          data-autofocus
+                        />
+                      ) : (
+                        <Text>{firstName}</Text>
+                      )}
+                    </Box>
 
-                  <Stack gap="md">
-                    <Title order={5}>Security</Title>
-                    <PasswordInput
-                      label="New password"
-                      placeholder="Leave blank to keep your current password"
-                      value={password}
-                      onChange={(event) => setPassword(event.currentTarget.value)}
-                    />
-                  </Stack>
+                    <Box>
+                      <Group justify="space-between" mb={4}>
+                        <Text size="sm" fw={500}>Last name</Text>
+                        {!editing.lastName && (
+                          <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => startEditing('lastName')} aria-label="Edit last name">
+                            ✎
+                          </ActionIcon>
+                        )}
+                      </Group>
+                      {editing.lastName ? (
+                        <TextInput
+                          required
+                          value={lastName}
+                          onChange={(event) => setLastName(event.currentTarget.value)}
+                          data-autofocus
+                        />
+                      ) : (
+                        <Text>{lastName}</Text>
+                      )}
+                    </Box>
+                  </SimpleGrid>
+
+                  <Box>
+                    <Group justify="space-between" mb={4}>
+                      <Text size="sm" fw={500}>Email</Text>
+                      {!editing.email && (
+                        <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => startEditing('email')} aria-label="Edit email">
+                          ✎
+                        </ActionIcon>
+                      )}
+                    </Group>
+                    {editing.email ? (
+                      <TextInput
+                        required
+                        value={email}
+                        onChange={(event) => setEmail(event.currentTarget.value)}
+                        data-autofocus
+                      />
+                    ) : (
+                      <Text>{email}</Text>
+                    )}
+                  </Box>
+
+                  <Box>
+                    <Group justify="space-between" mb={4}>
+                      <Text size="sm" fw={500}>Bio</Text>
+                      {!editing.bio && (
+                        <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => startEditing('bio')} aria-label="Edit bio">
+                          ✎
+                        </ActionIcon>
+                      )}
+                    </Group>
+                    {editing.bio ? (
+                      <Textarea
+                        placeholder="Tell others a bit about yourself"
+                        minRows={3}
+                        autosize
+                        value={bio}
+                        onChange={(event) => setBio(event.currentTarget.value)}
+                        data-autofocus
+                      />
+                    ) : bio ? (
+                      <Text style={{ whiteSpace: 'pre-wrap' }}>{bio}</Text>
+                    ) : (
+                      <Text c="dimmed" fs="italic">No bio yet.</Text>
+                    )}
+                  </Box>
+
+                  <Box>
+                    <Group justify="space-between" mb={4}>
+                      <Text size="sm" fw={500}>Interests</Text>
+                      {!editing.interests && (
+                        <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => startEditing('interests')} aria-label="Edit interests">
+                          ✎
+                        </ActionIcon>
+                      )}
+                    </Group>
+                    {editing.interests ? (
+                      <TagsInput
+                        placeholder={interests.length < 5 ? 'Add an interest' : undefined}
+                        description="Add up to 5 interests"
+                        maxTags={5}
+                        value={interests}
+                        onChange={setInterests}
+                        data-autofocus
+                      />
+                    ) : interests.length > 0 ? (
+                      <Group gap={6}>
+                        {interests.map((interest) => (
+                          <Badge key={interest} color="blue" variant="light">{interest}</Badge>
+                        ))}
+                      </Group>
+                    ) : (
+                      <Text c="dimmed" fs="italic">No interests yet.</Text>
+                    )}
+                  </Box>
 
                   <Group justify="flex-end">
                     <Button type="submit" loading={isSaving}>
@@ -268,7 +397,10 @@ export default function User() {
             </Paper>
 
             <Paper withBorder radius="md" p="xl">
-              <Group justify="flex-end">
+              <Group justify="space-between">
+                <Button variant="default" onClick={openPasswordModal}>
+                  Change password
+                </Button>
                 <Button color="red" variant="light" onClick={() => setIsDeleteOpen(true)}>
                   Delete account
                 </Button>
@@ -326,6 +458,34 @@ export default function User() {
             </Button>
             <Button onClick={handleSavePfp} loading={isSavingPfp}>
               Save
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal opened={isPasswordOpen} onClose={() => setIsPasswordOpen(false)} title="Change password" centered>
+        <Stack>
+          {passwordError && <Alert color="red">{passwordError}</Alert>}
+          <PasswordInput
+            label="Current password"
+            value={currentPassword}
+            onChange={(event) => setCurrentPassword(event.currentTarget.value)}
+            data-autofocus
+          />
+          <PasswordInput
+            label="New password"
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.currentTarget.value)}
+          />
+          <Text size="xs" c="dimmed">
+            You'll be logged out after saving, so you can sign back in with your new password.
+          </Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setIsPasswordOpen(false)} disabled={isSavingPassword}>
+              Cancel
+            </Button>
+            <Button onClick={handleChangePassword} loading={isSavingPassword}>
+              Save changes
             </Button>
           </Group>
         </Stack>
