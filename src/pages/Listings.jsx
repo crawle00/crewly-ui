@@ -3,6 +3,114 @@ import {useParams , useNavigate} from "../router"
 import { getFaq, createFaq, createFaqReply, createReports, getVolunteers, getListing, getCurrentUser, getClub, volunteerForListing, removeVolunteerFromListing, updateListing, getReports } from "../api/API"
 import {useEffect , useState} from "react"
 
+function ReplyItem({
+    reply,
+    questionId,
+    replies,
+    replyTo,
+    setReplyTo,
+    replyText,
+    setReplyText,
+    handleSubmitReply,
+}) {
+    const childReplies = replies.filter(
+        (child) =>
+            String(child.parentReplyId) === String(reply._id)
+    )
+
+    const [showReplies, setShowReplies] = useState(false)
+
+    return (
+        <Stack mt="sm">
+            <Group>
+                <Avatar src={reply.pfp} size="sm" />
+                <Text size="xs" c ="dimmed">{reply.firstName}{" "}{reply.lastName}</Text>
+                <Text size="sm">{reply.reply}</Text>
+                <Button
+                    variant = "subtle"
+                    size = "xs"
+                    onClick={() => {
+                    setReplyTo({
+                        questionId,
+                        replyId: reply._id
+                    })
+                        setReplyText("")
+                    }}
+                >
+                     Reply
+                </Button>
+                <Group w ="100%" justify="flex-end" color="var(--mantine-color-blue-9)">
+                     {childReplies.length > 0 && (
+                        <Button
+                            variant="subtle"
+                            size="xs"
+                            onClick={() => setShowReplies(!showReplies)}
+                        >
+                            {showReplies
+                                ? "Hide replies"
+                                : `View ${childReplies.length} ${
+                                    childReplies.length === 1
+                                        ? "reply"
+                                        : "replies"
+                                }`
+                            }
+                        </Button>
+                    )}
+                </Group>
+            </Group>
+
+            {replyTo?.questionId === questionId && 
+                String(replyTo.replyId) === String(reply._id) && (
+                    <Stack mt ="sm">
+                        <Textarea
+                            placeholder="Write a reply."
+                            minRows={2}
+                            value={replyText}
+                            onChange={(event) =>
+                                setReplyText(event.currentTarget.value)
+                            }
+                        />
+
+                        <Group justify="flex-end">
+                            <Button
+                                size="xs"
+                                onClick={() =>
+                                    handleSubmitReply(questionId, reply._id)
+                                }
+                            >
+                                Submit Reply
+                            </Button>
+                        </Group>
+                    </Stack>
+                )
+            }
+
+            {childReplies.length > 0 && (
+                <>
+
+                    {showReplies && (
+                            <Stack mt="sm" ml={50} pl ="md" style={{borderLeft: "2px solid var(--mantine-color-blue-9)"}}>
+                                {childReplies.map((childReply) => (
+                                    <ReplyItem
+                                        key={childReply._id}
+                                        reply={childReply}
+                                        questionId={questionId}
+                                        replies={replies}
+                                        replyTo={replyTo}
+                                        setReplyTo={setReplyTo}
+                                        replyText={replyText}
+                                        setReplyText={setReplyText}
+                                        handleSubmitReply={handleSubmitReply}
+                                    />
+                                ))}
+                            </Stack>
+                    )}
+                </>
+            )}
+        </Stack>
+    )
+}
+
 function Listings(){ 
     const navigate = useNavigate()
     const {id} = useParams()
@@ -32,25 +140,25 @@ function Listings(){
     const [reportsOpened, setReportsOpened] = useState(false);
     const [listingReports, setListingReports] = useState("")
 
-   const handleSubmitQuestion = async () => {
-    if (!question.trim()) return
+    const handleSubmitQuestion = async () => {
+        if (!question.trim()) return
 
-    try {
-        await createFaq(id, question)
+        try {
+            await createFaq(id, question)
 
-        const updatedFaq = await getFaq(id)
-        setFaq(updatedFaq)
-        setQuestion("")
-    } catch (error) {
-        console.error("SUBMIT FAQ ERROR:", error.response?.data || error)
+            const updatedFaq = await getFaq(id)
+            setFaq(updatedFaq)
+            setQuestion("")
+        } catch (error) {
+            console.error("SUBMIT FAQ ERROR:", error.response?.data || error)
+            }
         }
-    }
 
-    const handleSubmitReply = async (questionId) => {
+    const handleSubmitReply = async (questionId, parentReplyId = null) => {
         if(!replyText.trim()) return
 
         try {
-            await createFaqReply(questionId, replyText)
+            await createFaqReply(questionId, replyText, parentReplyId)
 
             const updatedFaq = await getFaq(id)
             setFaq(updatedFaq)
@@ -81,15 +189,15 @@ function Listings(){
     }
 
     const handleSubmitReports = async () => {
-    if (!reports.trim()) return
+        if (!reports.trim()) return
 
-    try {
-        await createReports(id, reports)
-        setReports("")
-    } catch (error) {
-        console.error("SUBMIT REPORT ERROR:", error.response?.data || error)
+        try {
+            await createReports(id, reports)
+            setReports("")
+        } catch (error) {
+            console.error("SUBMIT REPORT ERROR:", error.response?.data || error)
+            }
         }
-    }
 
     //listing Owner Side
     const handleOpenEdit = () => {
@@ -243,34 +351,34 @@ function Listings(){
                 String(volunteerId) === String(currentUser._id)
         )
 
-        console.log("FAQ DATA:", faq)
+
     return(
         <Box>
             {isOwner && (
-                        <Group justify = "flex-end" mt = "md" px="md">
-                            <Button color="var(--mantine-color-blue-9)" onClick={handleOpenEdit}>Edit Listing</Button>
-                                <Modal opened={editOpened} onClose={() => setEditOpened(false)} title="Edit Listing" centered >
-                                    <TextInput label= "Title" value={editTitle} onChange={(event) => setEditTitle(event.currentTarget.value)} mb="md" />
-                                    <Textarea justify="flex-end" value={editDescription} onChange={(event) => setEditDescription(event.currentTarget.value)} />
-                                    <TextInput label= "Location" value={editLocationName} onChange={(event) => setEditLocationName(event.currentTarget.value)}mb="md" />
-                                    <TextInput label= "Address" value={editLocationAddress} onChange={(event) => setEditLocationAddress(event.currentTarget.value)}mb="md" />
-                                    <Switch label= "Remote" checked={editIsRemote} onChange={(event) => setEditIsRemote(event.currentTarget.checked)} mb="md" />
-                                    <NumberInput label= "Capacity" value={editCapacity} onChange={setEditCapacity} min={1} mb="md" />
-                                    <TextInput type="datetime-local" label="Start Time" value={editStartsAt} onChange={(event) => setEditStartsAt(event.currentTarget.value)} mb="md" />
-                                    <TextInput type="datetime-local" label="End Time" value={editEndsAt} onChange={(event) => setEditEndsAt(event.currentTarget.value)} mb="lg" />
-                                    <Group justify="flex-end">
-                                        <Button variant="default" onClick={() => setEditOpened(false)}>cancel</Button>
-                                        <Button onClick={handleSaveEdit}>Save Changes</Button>
-                                    </Group>
-                                </Modal>
-                            <Button color ={listings.isCancelled ? "var(--mantine-color-blue-9)" : "red"} onClick={handleCancelListing}>{listings.isCancelled ? "Open Listing" : "Cancel Listing"}</Button>
-                        </Group>
-                    )}
+                <Group justify = "flex-end" mt = "md" px="md" wrap="wrap">
+                    <Button color="var(--mantine-color-blue-9)" onClick={handleOpenEdit}>Edit Listing</Button>
+                        <Modal opened={editOpened} onClose={() => setEditOpened(false)} title="Edit Listing" centered >
+                            <TextInput label= "Title" value={editTitle} onChange={(event) => setEditTitle(event.currentTarget.value)} mb="md" />
+                            <Textarea justify="flex-end" value={editDescription} onChange={(event) => setEditDescription(event.currentTarget.value)} />
+                            <TextInput label= "Location" value={editLocationName} onChange={(event) => setEditLocationName(event.currentTarget.value)}mb="md" />
+                            <TextInput label= "Address" value={editLocationAddress} onChange={(event) => setEditLocationAddress(event.currentTarget.value)}mb="md" />
+                            <Switch label= "Remote" checked={editIsRemote} onChange={(event) => setEditIsRemote(event.currentTarget.checked)} mb="md" />
+                            <NumberInput label= "Capacity" value={editCapacity} onChange={setEditCapacity} min={1} mb="md" />
+                            <TextInput type="datetime-local" label="Start Time" value={editStartsAt} onChange={(event) => setEditStartsAt(event.currentTarget.value)} mb="md" />
+                            <TextInput type="datetime-local" label="End Time" value={editEndsAt} onChange={(event) => setEditEndsAt(event.currentTarget.value)} mb="lg" />
+                            <Group justify="flex-end">
+                                <Button variant="default" onClick={() => setEditOpened(false)}>cancel</Button>
+                                <Button onClick={handleSaveEdit}>Save Changes</Button>
+                            </Group>
+                        </Modal>
+                        <Button color ={listings.isCancelled ? "var(--mantine-color-blue-9)" : "red"} onClick={handleCancelListing}>{listings.isCancelled ? "Open Listing" : "Cancel Listing"}</Button>
+                </Group>
+            )}
             <Stack gap = "x1">
                 <Box
                     mt = "lg"
                     p = "lg"
-                    w = "60%"
+                    w = {{base: "95%", sm: "90%", md: "60%"}}
                     mx = "auto"
                     bg = "#fafafa"
                     style = {{border: "1px solid var(--mantine-color-blue-9)" , borderRadius: "8px" , textAlign: "center"}}  
@@ -404,7 +512,7 @@ function Listings(){
                 <Box
                     mt = "lg"
                     p = "lg"
-                    w = "60%"
+                    w = {{base: "95%", sm: "90%", md: "60%"}}
                     mx = "auto"
                     bg = "#fafafa"
                     style = {{border: "1px solid var(--mantine-color-blue-9)" , borderRadius: "8px" , textAlign: "center"}}
@@ -428,79 +536,87 @@ function Listings(){
                     <Title order={4} ta="left" mb="md">
                         Submitted Questions
                     </Title>
-                        <ScrollArea h={200}>
-                                <Stack>
-                                    {faq.length === 0 ? (
-                                        <Text c="dimmed">No questions have been submitted yet.</Text>
-                                    ) : (
-                                        faq.map((item) => (
-                                            <Paper key={item._id} withBorder p="md" radius="md">
-                                                    <Text fw={700} ta="left">
-                                                        {item.question}
-                                                    </Text>
 
-                                                <Group mt="xs">
-                                                    <Avatar
-                                                        src={item.pfp}
-                                                        alt=""
-                                                        size="sm"
-                                                    />
-                                                    <Text size="sm" c="dimmed">{item.firstName} {" "} {item.lastName}</Text>
-                                                    <Button
-                                                        variant="subtle"
-                                                        size="xs"
-                                                        onClick={() => {setReplyTo(replyTo === item._id ? null : item._id)
-                                                            setReplyText("")
-                                                        }}
-                                                    >
-                                                        Reply
+                    <Stack>
+                        {faq.length === 0 ? (
+                            <Text c="dimmed">No questions have been submitted yet.</Text>
+                        ) : (
+                            faq.map((item) => (
+                                <Box key={item._id}>
+
+                                    <Paper key={item._id} withBorder p="md" radius="md">
+                                        <Text fw={700} ta="left">
+                                            {item.question}
+                                        </Text>
+
+                                        <Group mt="xs">
+                                            <Avatar
+                                                src={item.pfp}
+                                                alt=""
+                                                size="sm"
+                                            />
+                                        <Text size="sm" c="dimmed">{item.firstName} {" "} {item.lastName}</Text>
+                                            <Button
+                                                variant="subtle"
+                                                size="xs"
+                                                onClick={() => {
+                                                    setReplyTo({
+                                                        questionId: item._id,
+                                                        replyId: null
+                                                    })
+                                                        setReplyText("")
+                                                    }}
+                                                >
+                                                    Reply
+                                            </Button>
+                                        </Group>
+
+                                        {replyTo?.questionId === item._id && replyTo.replyId === null && (
+                                            <Stack mt="sm">
+                                                <Textarea
+                                                    placeholder="Write a reply..."
+                                                    minRows={2}
+                                                    value={replyText}
+                                                    onChange={(event) =>
+                                                        setReplyText(event.currentTarget.value)
+                                                    }
+                                                />
+
+                                                <Group justify="flex-end">
+                                                    <Button size="xs" onClick={() => handleSubmitReply(replyTo.questionId , replyTo.replyId)}>
+                                                        Submit Reply
                                                     </Button>
                                                 </Group>
+                                            </Stack>
+                                        )}
 
-                                                {replyTo === item._id && (
-                                                    <Stack mt="sm">
-                                                        <Textarea
-                                                            placeholder="Write a reply..."
-                                                            minRows={2}
-                                                            value={replyText}
-                                                            onChange={(event) =>
-                                                                setReplyText(event.currentTarget.value)
-                                                            }
-                                                        />
+                                        <Box ml="lg" bg="gray.1" style={{borderRadius: "5px"}}>
+                                            <Stack mt="xs" ml={50}>
+                                                {item.replies?.filter(
+                                                    (reply) => reply.parentReplyId === null
+                                                ).map((reply) => (
+                                                    <ReplyItem
+                                                        key={reply._id}
+                                                        reply={reply}
+                                                        questionId={item._id}
+                                                        replies={item.replies}
+                                                        replyTo={replyTo}
+                                                        setReplyTo={setReplyTo}
+                                                        replyText={replyText}
+                                                        setReplyText={setReplyText}
+                                                        handleSubmitReply={handleSubmitReply}
+                                                    />
+                                                ))}
+                                            </Stack>
+                                        </Box>
+                                    </Paper>
 
-                                                        <Group justify="flex-end">
-                                                            <Button size="xs" onClick={() => handleSubmitReply(item._id)}>
-                                                                Submit Reply
-                                                            </Button>
-                                                        </Group>
-                                                    </Stack>
-                                                )}
-
-                                                    {item.replies?.length > 0 && (
-                                                        <ScrollArea h={100}>
-                                                            {item.replies?.map((reply) => (
-                                                                <Paper
-                                                                    key={reply._id}
-                                                                    withBorder
-                                                                    p="sm"
-                                                                    mt="sm" ml="xl" 
-                                                                >
-                                                                    <Group>
-                                                                        <Avatar src={reply.pfp} alt="" size="sm" />
-                                                                        <Text size="xs" c="dimmed" ml="xl">{reply.firstName} {" "} {reply.lastName}</Text>
-                                                                        <Text size="sm">{reply.reply}</Text>
-                                                                    </Group>
-                                                                </Paper>
-                                                            ))}
-                                                        </ScrollArea>
-                                                    )}
-                                            </Paper>
-                                        ))
-                                    )}
-                                </Stack>
-                        </ScrollArea>
-                </Box>
-            </Stack>    
+                                </Box>
+                            ))
+                        )}
+                    </Stack>
+                </Box> 
+            </Stack> 
         </Box>
     )
 }

@@ -143,8 +143,8 @@ export async function createFaq(listingId, question) {
   return response.data
 }
 
-export async function createFaqReply(questionId, reply) {
-    const response = await axios.post(`${API_URL}/faq/${questionId}/replies`, {reply}, requestConfig)
+export async function createFaqReply(questionId, reply, parentReplyId = null) {
+    const response = await axios.post(`${API_URL}/faq/${questionId}/replies`, {reply, parentReplyId}, requestConfig)
     return response.data
 }
 
