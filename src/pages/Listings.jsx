@@ -1,6 +1,6 @@
-import {Box, Title, Text, Button , Avatar , Group , Paper , Stack , Textarea , Modal , TextInput , NumberInput , Switch , Drawer , ScrollArea , Divider} from "@mantine/core"
+import {Box, Title, Text, Button , Avatar , Group , Paper , Stack , Textarea , Modal , TextInput , NumberInput , Switch , Drawer , ScrollArea , Divider, Image} from "@mantine/core"
 import {useParams , useNavigate} from "../router"
-import { getFaq, createFaq, createReports, getVolunteers, getListing, getCurrentUser, getClub , volunteerForListing, updateListing , getReports } from "../api/API"
+import { getFaq, createFaq, createFaqReply, createReports, getVolunteers, getListing, getCurrentUser, getClub, volunteerForListing, removeVolunteerFromListing, updateListing, getReports } from "../api/API"
 import {useEffect , useState} from "react"
 
 function Listings(){ 
@@ -16,6 +16,8 @@ function Listings(){
     const [rosterOpened, setRosterOpened] = useState(false)
     const [viewReportOpened, setViewReportOpened] = useState(false);
     const [loading, setLoading] = useState(true)
+    const [replyTo, setReplyTo] = useState(null)
+    const [replyText, setReplyText] = useState("")
 
     //listing owner side
     const [editOpened, setEditOpened] = useState(false)
@@ -34,21 +36,48 @@ function Listings(){
     if (!question.trim()) return
 
     try {
-        const newQuestion = await createFaq(id, question)
+        await createFaq(id, question)
 
-        setFaq((currentFaq) => [...currentFaq, newQuestion])
+        const updatedFaq = await getFaq(id)
+        setFaq(updatedFaq)
         setQuestion("")
     } catch (error) {
-        console.error("UPDATE LISTING ERROR:", error.response?.data || error)
+        console.error("SUBMIT FAQ ERROR:", error.response?.data || error)
+        }
+    }
+
+    const handleSubmitReply = async (questionId) => {
+        if(!replyText.trim()) return
+
+        try {
+            await createFaqReply(questionId, replyText)
+
+            const updatedFaq = await getFaq(id)
+            setFaq(updatedFaq)
+
+            setReplyText("")
+            setReplyTo(null)
+        } catch (error) {
+            console.error("CREATE REPLY ERROR:" , error.response?.data || error)
         }
     }
 
     const handleVolunteer = async () => {
-        const updatedListing = await volunteerForListing(id)
-        setListing(updatedListing)
+        try{
+            let updatedListing
 
-        const updatedVolunteers = await getVolunteers(id)
-        setVolunteers(updatedVolunteers)
+            if(isVolunteered)   {
+                updatedListing = await removeVolunteerFromListing(id)
+            } else {
+                updatedListing = await volunteerForListing(id)
+            }
+            setListing(updatedListing)
+
+            const updatedVolunteers = await getVolunteers(id)
+            setVolunteers(updatedVolunteers)
+        } catch (error) {
+            console.error("VOLUNTEER ERROR:") || error
+        }
     }
 
     const handleSubmitReports = async () => {
@@ -58,7 +87,7 @@ function Listings(){
         await createReports(id, reports)
         setReports("")
     } catch (error) {
-        console.error("UPDATE LISTING ERROR:", error.response?.data || error)
+        console.error("SUBMIT REPORT ERROR:", error.response?.data || error)
         }
     }
 
@@ -114,17 +143,14 @@ function Listings(){
     const handleCancelListing = async () => {
         try {
             const updatedListing = await updateListing(id, {
-                isCancelled: true
+                isCancelled: !listings.isCancelled
             })
 
         setListing(updatedListing)
         } catch (error) {
-            console.error(
-                "CANCEL LISTING ERROR:",
-                error.response?.data || error
-            )
+            console.error("CANCEL LISTING ERROR:", error.response?.data || error)
         }
-    }   
+    }
 
     const handleOpenReports = async () => {
     try {
@@ -132,7 +158,7 @@ function Listings(){
             setListingReports(data);
             setReportsOpened(true);
         } catch (error) {
-            console.error("GET REPORTS ERROR:", error.response?.data || error);
+            console.error("OPEN REPORTS ERROR:", error.response?.data || error);
         }
     }
 
@@ -152,15 +178,24 @@ function Listings(){
         getFaq(id).then((data) => {
             setFaq(data)
         })
+        .catch((error) =>{
+            console.log("GET FAQ ERROR:" , error.response?.status, error.response?.data)
+        })
     }, [id])
     useEffect(() => {
         getVolunteers(id).then((data) => {
             setVolunteers(data)
         })
+        .catch((error) =>{
+            console.log("GET VOLUNTEER ERROR:" , error.response?.status, error.response?.data)
+        })
     }, [id])
     useEffect(() => {
         getCurrentUser().then((data) => {
             setCurrentUser(data)
+        })
+        .catch((error) =>{
+            console.log("GET CURRENT USER ERROR:" , error.response?.status, error.response?.data)
         })
     }, [])
     useEffect(() => {
@@ -169,7 +204,7 @@ function Listings(){
                 setClub(data)
         })
         .catch((error) => {
-            console.log("CLUB ERROR:", error.response?.status, error.response?.data)
+            console.log("GET CLUB ERROR:", error.response?.status, error.response?.data)
         })
     }, [listings])
 
@@ -178,6 +213,14 @@ function Listings(){
         currentUser &&
         listings &&
         String(currentUser._id) === String(listings.createdBy)
+
+    if (loading) {
+        return (
+            <Stack align="center" justify="center" mih="100vh">
+                <Title order={2}>Pulling Up Listing.</Title>
+            </Stack>
+        )
+    }
 
     if (!listings) {
         return (
@@ -188,23 +231,20 @@ function Listings(){
         )
     }
 
+    const isVolunteered =
+        currentUser &&
+        listings &&
+        listings.volunteers?.some(
+            (volunteerId) =>
+                String(volunteerId) === String(currentUser._id)
+        )
 
+        console.log("FAQ DATA:", faq)
     return(
         <Box>
-
-            <Group justify = "flex-start">
-                <Button
-                    variant = "subtle"
-                    onClick = {() => navigate("/")}
-                    size="lg"
-                >
-                    Back to Listings
-                </Button>
-            </Group>
-
             {isOwner && (
                         <Group justify = "flex-end" mt = "md" px="md">
-                            <Button onClick={handleOpenEdit}>Edit Listing</Button>
+                            <Button color="var(--mantine-color-blue-9)" onClick={handleOpenEdit}>Edit Listing</Button>
                                 <Modal opened={editOpened} onClose={() => setEditOpened(false)} title="Edit Listing" centered >
                                     <TextInput label= "Title" value={editTitle} onChange={(event) => setEditTitle(event.currentTarget.value)} mb="md" />
                                     <Textarea justify="flex-end" value={editDescription} onChange={(event) => setEditDescription(event.currentTarget.value)} />
@@ -219,10 +259,9 @@ function Listings(){
                                         <Button onClick={handleSaveEdit}>Save Changes</Button>
                                     </Group>
                                 </Modal>
-                            <Button color ="red" onClick={handleCancelListing}>Cancel Listing</Button>
+                            <Button color ={listings.isCancelled ? "var(--mantine-color-blue-9)" : "red"} onClick={handleCancelListing}>{listings.isCancelled ? "Open Listing" : "Cancel Listing"}</Button>
                         </Group>
                     )}
-
             <Stack gap = "x1">
                 <Box
                     mt = "lg"
@@ -232,7 +271,16 @@ function Listings(){
                     bg = "#fafafa"
                     style = {{border: "1px solid var(--mantine-color-blue-9)" , borderRadius: "8px" , textAlign: "center"}}  
                 >
+                    {listings.bannerImage && (
+                        <Image src={listings.bannerImage} alt={""} radius="md" h={250} fit="cover" mb="lg"/>
+                    )}
                     <Group justify="center" mb="md">
+                        <Avatar
+                            src={club?.pfp}
+                            alt={club?.name}
+                            size="lg"
+                            radius="md"
+                        />
                         <Text fw={700}>
                             {club ? club.name : "Loading"}
                         </Text>
@@ -258,7 +306,7 @@ function Listings(){
                     </Text>
 
                     <Group justify="center" mt="lg" gap="x1">
-                        <Button mt = "lg" onClick = {handleVolunteer}>Volunteer</Button>
+                        <Button mt = "lg"  color="var(--mantine-color-blue-9)" onClick = {handleVolunteer}>{isVolunteered ? "Unvolunteer" : "Volunteer"}</Button>
                         <Button mt = "lg" variant = "light" onClick={() => setRosterOpened(true)}>View Volunteer Roster</Button>
                     </Group>
                     
@@ -292,13 +340,13 @@ function Listings(){
                                 <Group justify="flex-end">
                                     <Button variant="default" onClick={() => setViewReportOpened(false)} > Cancel </Button>
 
-                                    <Button color="red"onClick={handleSubmitReports}> Submit Report </Button>
+                                    <Button color="var(--mantine-color-blue-9)" onClick={handleSubmitReports}> Submit Report </Button>
                                 </Group>
                             </Stack>
                         </Modal>
                     )}
                     {isOwner && (
-                        <Modal opened={reportsOpened} onClose={() => setReportsOpened(false)} title="Listing Reports" centered >
+                        <Modal opened={reportsOpened} onClose={() => setReportsOpened(false)} title="Reports for this listing" centered >
                             <ScrollArea h={400}>
                                 <Stack>
                                     {listingReports.length === 0 ? (
@@ -310,7 +358,10 @@ function Listings(){
                                             <Paper
                                                 key={report._id} withBorder p="md"  radius="md" >
                                                 <Text>{report.reports}</Text>
-                                                <Text size="sm" c="dimmed" mt="xs" > By {report.firstName}{" "}{report.lastName}</Text>
+                                                <Group>
+                                                    <Avatar>{report.pfp}</Avatar>
+                                                    <Text size="sm" c="dimmed" mt="xs" >{report.firstName}{" "}{report.lastName}</Text>
+                                                </Group>
                                             </Paper>
                                         ))
                                     )}
@@ -336,7 +387,7 @@ function Listings(){
                                 <Group key = {volunteer._id}>
                                     <Paper key ={volunteer._id} withBorder p ="sm" radius = "md" w ="100%" bd="1px solid var(--mantine-color-gray-4)">
                                         <Avatar radius = "x1">
-                                            {volunteer.firstName.charAt(0) || "?"}
+                                            {volunteer.pfp}
                                         </Avatar>
                                         <Text>{volunteer.firstName} {volunteer.lastName}</Text>
                                     </Paper>
@@ -364,7 +415,7 @@ function Listings(){
                             onChange={(event) =>setQuestion(event.currentTarget.value)}
                         />
                         <Group justify="flex-end">                          
-                            <Button w="fit-content" onClick={handleSubmitQuestion}>Submit Question</Button>
+                            <Button w="fit-content" color="var(--mantine-color-blue-9)" onClick={handleSubmitQuestion}>Submit Question</Button>
                         </Group>      
                     </Stack>
 
@@ -379,9 +430,66 @@ function Listings(){
                                         <Text c="dimmed">No questions have been submitted yet.</Text>
                                     ) : (
                                         faq.map((item) => (
-                                            <Paper key={item.id} withBorder p="md" radius="md">
-                                                <Text fw={700}> {item.question} </Text>
-                                                <Text size="sm" c="dimmed" mt="xs"> Asked by {item.firstName} {" "} {item.lastName}</Text>
+                                            <Paper key={item._id} withBorder p="md" radius="md">
+                                                    <Text fw={700} ta="left">
+                                                        {item.question}
+                                                    </Text>
+
+                                                <Group mt="xs">
+                                                    <Avatar
+                                                        src={item.pfp}
+                                                        alt=""
+                                                        size="sm"
+                                                    />
+                                                    <Text size="sm" c="dimmed">{item.firstName} {" "} {item.lastName}</Text>
+                                                    <Button
+                                                        variant="subtle"
+                                                        size="xs"
+                                                        onClick={() => {setReplyTo(replyTo === item._id ? null : item._id)
+                                                            setReplyText("")
+                                                        }}
+                                                    >
+                                                        Reply
+                                                    </Button>
+                                                </Group>
+
+                                                {replyTo === item._id && (
+                                                    <Stack mt="sm">
+                                                        <Textarea
+                                                            placeholder="Write a reply..."
+                                                            minRows={2}
+                                                            value={replyText}
+                                                            onChange={(event) =>
+                                                                setReplyText(event.currentTarget.value)
+                                                            }
+                                                        />
+
+                                                        <Group justify="flex-end">
+                                                            <Button size="xs" onClick={() => handleSubmitReply(item._id)}>
+                                                                Submit Reply
+                                                            </Button>
+                                                        </Group>
+                                                    </Stack>
+                                                )}
+
+                                                    {item.replies?.length > 0 && (
+                                                        <ScrollArea h={100}>
+                                                            {item.replies?.map((reply) => (
+                                                                <Paper
+                                                                    key={reply._id}
+                                                                    withBorder
+                                                                    p="sm"
+                                                                    mt="sm" ml="xl" 
+                                                                >
+                                                                    <Group>
+                                                                        <Avatar src={reply.pfp} alt="" size="sm" />
+                                                                        <Text size="xs" c="dimmed" ml="xl">{reply.firstName} {" "} {reply.lastName}</Text>
+                                                                        <Text size="sm">{reply.reply}</Text>
+                                                                    </Group>
+                                                                </Paper>
+                                                            ))}
+                                                        </ScrollArea>
+                                                    )}
                                             </Paper>
                                         ))
                                     )}
