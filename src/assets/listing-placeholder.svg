@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" role="img" aria-label="Crewly pattern">
+  <defs>
+    <pattern id="crewly-icons" width="72" height="72" patternUnits="userSpaceOnUse">
+      <rect width="72" height="72" fill="#d0ebff" />
+      <g transform="translate(36 36) rotate(18) translate(-20 -20)">
+        <rect width="40" height="40" rx="13" fill="#228be6" />
+        <path d="M12 20c4.5 6 11.5 6 16 0" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="3" />
+      </g>
+    </pattern>
+  </defs>
+  <rect width="360" height="180" fill="#1864ab" />
+  <rect width="360" height="180" fill="url(#crewly-icons)" opacity="0.94" />
+</svg>

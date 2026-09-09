@@ -142,6 +142,10 @@ function Listings(){
                 setListing(data)
         })
         .catch((error) =>{
+            if (error.response?.status === 401) {
+                navigate('/login')
+                return
+            }
             console.log("GET LISTING ERROR:" , error.response?.status, error.response?.data)
         })
         .finally(() => {
