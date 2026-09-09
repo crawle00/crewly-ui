@@ -145,10 +145,10 @@ function ListingFilters({ filters, onChange, onApply, onReset, loading }) {
               </SimpleGrid>
 
               <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
-                <TextInput type="date" label="Starts after" value={filters.startsAfter} onChange={(event) => onChange((current) => ({ ...current, startsAfter: event.currentTarget.value }))} />
-                <TextInput type="date" label="Starts before" value={filters.startsBefore} onChange={(event) => onChange((current) => ({ ...current, startsBefore: event.currentTarget.value }))} />
-                <TextInput type="date" label="Ends after" value={filters.endsAfter} onChange={(event) => onChange((current) => ({ ...current, endsAfter: event.currentTarget.value }))} />
-                <TextInput type="date" label="Ends before" value={filters.endsBefore} onChange={(event) => onChange((current) => ({ ...current, endsBefore: event.currentTarget.value }))} />
+                <TextInput type="date" label="Starts after" value={filters.startsAfter} onChange={(event) => { const value = event.currentTarget.value; onChange((current) => ({ ...current, startsAfter: value })); }} />
+                <TextInput type="date" label="Starts before" value={filters.startsBefore} onChange={(event) => { const value = event.currentTarget.value; onChange((current) => ({ ...current, startsBefore: value })); }} />
+                <TextInput type="date" label="Ends after" value={filters.endsAfter} onChange={(event) => { const value = event.currentTarget.value; onChange((current) => ({ ...current, endsAfter: value })); }} />
+                <TextInput type="date" label="Ends before" value={filters.endsBefore} onChange={(event) => { const value = event.currentTarget.value; onChange((current) => ({ ...current, endsBefore: value })); }} />
               </SimpleGrid>
 
               <Group justify="flex-end" gap="sm">
