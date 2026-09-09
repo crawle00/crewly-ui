@@ -143,6 +143,11 @@ export async function createFaq(listingId, question) {
   return response.data
 }
 
+export async function createFaqReply(questionId, reply) {
+    const response = await axios.post(`${API_URL}/faq/${questionId}/replies`, {reply}, requestConfig)
+    return response.data
+}
+
 export async function createReports(listingId , reports) {
   const response = await axios.post(`${API_URL}/reports`, {listingId , reports} , requestConfig)
   return response.data
@@ -160,9 +165,12 @@ export async function getVolunteers(listingId) {
 
 export async function volunteerForListing(listingId) {
   const response = await axios.post(
-    `${API_URL}/jobs/listing/${listingId}/volunteers`,
-    null,
-    requestConfig
-  )
+    `${API_URL}/jobs/listing/${listingId}/volunteers`, null, requestConfig)
+  return response.data
+}
+
+export async function removeVolunteerFromListing(listingId) {
+  const response = await axios.delete(
+    `${API_URL}/jobs/listing/${listingId}/volunteers`, null, requestConfig)
   return response.data
 }
