@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ActionIcon, Alert, Avatar, Badge, Box, Button, Container, Divider, Group, Modal, Paper, PasswordInput, SimpleGrid, Stack, TagsInput, Text, TextInput, Textarea, Title, UnstyledButton } from '@mantine/core'
 import { useParams, useNavigate } from '../router'
-import { deleteAccount, getCurrentUser, getUser, logout, updateCurrentUser } from '../api/API'
+import { deleteAccount, getClub, getCurrentUser, getManagedClubs, getUser, logout, updateCurrentUser } from '../api/API'
+import defaultClubIcon from '../assets/default-club-icon.svg'
 
 function getErrorMessage(requestError) {
   return requestError.response?.data?.error?.message || 'Unable to complete the request.'
@@ -21,6 +22,8 @@ export default function User() {
   const [email, setEmail] = useState('')
   const [bio, setBio] = useState('')
   const [interests, setInterests] = useState([])
+  const [managedClubs, setManagedClubs] = useState([])
+  const [profileClubs, setProfileClubs] = useState([])
   const [isSaving, setIsSaving] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
@@ -63,6 +66,21 @@ export default function User() {
           setEmail(profile.email)
           setBio(profile.bio || '')
           setInterests(profile.interests || [])
+          getManagedClubs()
+            .then((clubs) => {
+              if (isMounted) setManagedClubs(clubs)
+            })
+            .catch(() => {
+              if (isMounted) setManagedClubs([])
+            })
+        } else if (profile.clubManagement && profile.clubManagement.length > 0) {
+          Promise.all(profile.clubManagement.map((clubId) => getClub(clubId)))
+            .then((clubs) => {
+              if (isMounted) setProfileClubs(clubs)
+            })
+            .catch(() => {
+              if (isMounted) setProfileClubs([])
+            })
         }
       })
       .catch((requestError) => {
@@ -397,6 +415,22 @@ export default function User() {
             </Paper>
 
             <Paper withBorder radius="md" p="xl">
+              <Title order={5} mb="md">Clubs</Title>
+              {managedClubs.length > 0 ? (
+                <Stack gap="sm">
+                  {managedClubs.map((club) => (
+                    <Group key={club._id} gap="sm" wrap="nowrap">
+                      <Avatar src={club.pfp || defaultClubIcon} radius="sm" size={36} />
+                      <Text>{club.name}</Text>
+                    </Group>
+                  ))}
+                </Stack>
+              ) : (
+                <Text c="dimmed" fs="italic">You don't lead any clubs yet.</Text>
+              )}
+            </Paper>
+
+            <Paper withBorder radius="md" p="xl">
               <Group justify="space-between">
                 <Button variant="default" onClick={openPasswordModal}>
                   Change password
@@ -437,6 +471,32 @@ export default function User() {
                   </Text>
                 )}
               </Box>
+
+              <Divider />
+
+              <Box>
+                <Text size="sm" fw={600} c="dimmed" mb={6}>Clubs</Text>
+                {profileClubs.length > 0 ? (
+                  <Stack gap="sm">
+                    {profileClubs.map((club) => (
+                      <Group key={club._id} gap="sm" wrap="nowrap">
+                        <Avatar src={club.pfp || defaultClubIcon} radius="sm" size={36} />
+                        <Text>{club.name}</Text>
+                      </Group>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Text c="dimmed" fs="italic">
+                    {profileUser.firstName} doesn't lead any clubs yet.
+                  </Text>
+                )}
+              </Box>
+
+              {profileUser.createdAt && (
+                <Text size="sm" c="dimmed">
+                  Member since {new Date(profileUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </Text>
+              )}
             </Stack>
           </Paper>
         )}
