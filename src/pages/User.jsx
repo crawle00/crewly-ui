@@ -1,18 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Alert, Avatar, Box, Button, Divider, Group, Modal, Paper, PasswordInput, Stack, Text, TextInput, Timeline, Title } from '@mantine/core'
+import { ActionIcon, Alert, Avatar, Badge, Box, Button, Container, Divider, Group, Modal, Paper, PasswordInput, SimpleGrid, Stack, TagsInput, Text, TextInput, Textarea, Title, UnstyledButton } from '@mantine/core'
 import { useParams, useNavigate } from '../router'
-import { deleteAccount, getCurrentUser, getUser, updateCurrentUser } from '../api/API'
+import { deleteAccount, getCurrentUser, getUser, logout, updateCurrentUser } from '../api/API'
 
 function getErrorMessage(requestError) {
   return requestError.response?.data?.error?.message || 'Unable to complete the request.'
 }
-
-// TODO: replace with real data once an endpoint for a user's attended listings exists.
-const PLACEHOLDER_RECENT_LISTINGS = [
-  { id: 1, title: 'Listing one', when: '2 days ago' },
-  { id: 2, title: 'Listing two', when: '1 week ago' },
-  { id: 3, title: 'Listing three', when: '3 weeks ago' },
-]
 
 export default function User() {
   const { id } = useParams()
@@ -26,11 +19,33 @@ export default function User() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [bio, setBio] = useState('')
+  const [interests, setInterests] = useState([])
   const [isSaving, setIsSaving] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  const [editing, setEditing] = useState({
+    firstName: false,
+    lastName: false,
+    email: false,
+    bio: false,
+    interests: false,
+  })
+  const startEditing = (field) => setEditing((prev) => ({ ...prev, [field]: true }))
+  const resetEditing = () => setEditing({ firstName: false, lastName: false, email: false, bio: false, interests: false })
 
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  const [isPfpOpen, setIsPfpOpen] = useState(false)
+  const [pfpDraft, setPfpDraft] = useState('')
+  const [isSavingPfp, setIsSavingPfp] = useState(false)
+
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [isSavingPassword, setIsSavingPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
 
   useEffect(() => {
     let isMounted = true
@@ -46,6 +61,8 @@ export default function User() {
           setFirstName(profile.firstName)
           setLastName(profile.lastName)
           setEmail(profile.email)
+          setBio(profile.bio || '')
+          setInterests(profile.interests || [])
         }
       })
       .catch((requestError) => {
@@ -63,7 +80,6 @@ export default function User() {
   }, [id, navigate])
 
   const isOwnProfile = currentUser && profileUser && String(currentUser._id) === String(profileUser._id)
-  const recentListings = PLACEHOLDER_RECENT_LISTINGS.slice(0, 3)
 
   const handleSave = async (event) => {
     event.preventDefault()
@@ -71,17 +87,69 @@ export default function User() {
     setError('')
     setSuccessMessage('')
     try {
-      const updates = { firstName, lastName, email }
-      if (password) updates.password = password
+      const updates = { firstName, lastName, email, bio, interests }
       const updatedUser = await updateCurrentUser(updates)
       setCurrentUser(updatedUser)
       setProfileUser(updatedUser)
-      setPassword('')
+      resetEditing()
       setSuccessMessage('Your changes have been saved.')
     } catch (requestError) {
       setError(getErrorMessage(requestError))
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+    try {
+      await logout()
+      navigate('/login')
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
+
+  const openPfpModal = () => {
+    setPfpDraft(profileUser.pfp || '')
+    setIsPfpOpen(true)
+  }
+
+  const handleSavePfp = async () => {
+    setIsSavingPfp(true)
+    setError('')
+    try {
+      const trimmed = pfpDraft.trim()
+      const updatedUser = await updateCurrentUser({ pfp: trimmed || null })
+      setCurrentUser(updatedUser)
+      setProfileUser(updatedUser)
+      setIsPfpOpen(false)
+      setSuccessMessage('Your profile photo has been updated.')
+    } catch (requestError) {
+      setError(getErrorMessage(requestError))
+    } finally {
+      setIsSavingPfp(false)
+    }
+  }
+
+  const openPasswordModal = () => {
+    setCurrentPassword('')
+    setNewPassword('')
+    setPasswordError('')
+    setIsPasswordOpen(true)
+  }
+
+  const handleChangePassword = async () => {
+    setIsSavingPassword(true)
+    setPasswordError('')
+    try {
+      await updateCurrentUser({ currentPassword, password: newPassword })
+      await logout()
+      navigate('/login')
+    } catch (requestError) {
+      setPasswordError(getErrorMessage(requestError))
+    } finally {
+      setIsSavingPassword(false)
     }
   }
 
@@ -104,88 +172,324 @@ export default function User() {
   if (!profileUser) {
     return (
       <Box p="xl">
-        <Text c="dimmed">User not found.</Text>
+        <Text c="dimmed" ta="center">User not found.</Text>
       </Box>
     )
   }
 
   return (
     <Box p="xl">
-      <Group mb="xl" gap="md">
-        <Avatar src={profileUser.pfp} radius="xl" size="lg" color="blue" />
-        <Stack gap={0}>
-          <Title order={2}>{profileUser.firstName} {profileUser.lastName}</Title>
-          {!isOwnProfile && profileUser.bio && <Text c="dimmed" size="sm">{profileUser.bio}</Text>}
-        </Stack>
-      </Group>
-
-      {error && <Alert color="red" mb="md" withCloseButton onClose={() => setError('')}>{error}</Alert>}
-      {successMessage && (
-        <Alert color="green" mb="md" withCloseButton onClose={() => setSuccessMessage('')}>
-          {successMessage}
-        </Alert>
-      )}
-
-      <Box style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 'var(--mantine-spacing-xl)', alignItems: 'start' }}>
-        <Box>
+      <Container size={640} px={0}>
+        <Box style={{ position: 'relative' }}>
+          <Box
+            style={{
+              height: 132,
+              borderRadius: 'var(--mantine-radius-md)',
+              background: 'linear-gradient(135deg, var(--mantine-color-blue-9), var(--mantine-color-blue-6))',
+            }}
+          />
+          {isOwnProfile && (
+            <Button
+              variant="white"
+              color="blue"
+              size="xs"
+              onClick={handleLogout}
+              loading={isLoggingOut}
+              style={{ position: 'absolute', top: 12, right: 12 }}
+            >
+              Log out
+            </Button>
+          )}
+        </Box>
+        <Stack align="center" gap={2} mt={-46} mb="xl">
           {isOwnProfile ? (
-            <Stack maw={480}>
-              <Paper withBorder p="md">
-                <form onSubmit={handleSave}>
-                  <Stack>
-                    <TextInput
-                      label="First name"
-                      required
-                      value={firstName}
-                      onChange={(event) => setFirstName(event.currentTarget.value)}
-                    />
-                    <TextInput
-                      label="Last name"
-                      required
-                      value={lastName}
-                      onChange={(event) => setLastName(event.currentTarget.value)}
-                    />
-                    <TextInput
-                      label="Email"
-                      required
-                      value={email}
-                      onChange={(event) => setEmail(event.currentTarget.value)}
-                    />
-                    <PasswordInput
-                      label="New password"
-                      placeholder="Leave blank to keep your current password"
-                      value={password}
-                      onChange={(event) => setPassword(event.currentTarget.value)}
-                    />
+            <UnstyledButton
+              onClick={openPfpModal}
+              aria-label="Change profile photo"
+              style={{ position: 'relative', borderRadius: '100%' }}
+            >
+              <Avatar
+                src={profileUser.pfp}
+                radius={100}
+                size={92}
+                color="blue"
+                style={{
+                  border: '4px solid var(--mantine-color-body)',
+                  boxShadow: '0 3px 10px rgba(8, 47, 73, 0.2)',
+                }}
+              />
+              <Box
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  right: 0,
+                  width: 28,
+                  height: 28,
+                  borderRadius: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'var(--mantine-color-blue-7)',
+                  color: 'white',
+                  fontSize: 13,
+                  border: '2px solid var(--mantine-color-body)',
+                }}
+              >
+                ✎
+              </Box>
+            </UnstyledButton>
+          ) : (
+            <Avatar
+              src={profileUser.pfp}
+              radius={100}
+              size={92}
+              color="blue"
+              style={{
+                border: '4px solid var(--mantine-color-body)',
+                boxShadow: '0 3px 10px rgba(8, 47, 73, 0.2)',
+              }}
+            />
+          )}
+          <Title order={2} ta="center" mt="sm">{profileUser.firstName} {profileUser.lastName}</Title>
+          {isOwnProfile && <Text size="sm" c="dimmed">{profileUser.email}</Text>}
+        </Stack>
+
+        {error && <Alert color="red" mb="md" withCloseButton onClose={() => setError('')}>{error}</Alert>}
+        {successMessage && (
+          <Alert color="green" mb="md" withCloseButton onClose={() => setSuccessMessage('')}>
+            {successMessage}
+          </Alert>
+        )}
+
+        {isOwnProfile ? (
+          <Stack gap="lg">
+            <Paper withBorder radius="md" p="xl">
+              <form onSubmit={handleSave}>
+                <Stack gap="md">
+                  <Title order={5}>Profile details</Title>
+
+                  <SimpleGrid cols={{ base: 1, sm: 2 }}>
+                    <Box>
+                      <Group justify="space-between" mb={4}>
+                        <Text size="sm" fw={500}>First name</Text>
+                        {!editing.firstName && (
+                          <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => startEditing('firstName')} aria-label="Edit first name">
+                            ✎
+                          </ActionIcon>
+                        )}
+                      </Group>
+                      {editing.firstName ? (
+                        <TextInput
+                          required
+                          value={firstName}
+                          onChange={(event) => setFirstName(event.currentTarget.value)}
+                          data-autofocus
+                        />
+                      ) : (
+                        <Text>{firstName}</Text>
+                      )}
+                    </Box>
+
+                    <Box>
+                      <Group justify="space-between" mb={4}>
+                        <Text size="sm" fw={500}>Last name</Text>
+                        {!editing.lastName && (
+                          <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => startEditing('lastName')} aria-label="Edit last name">
+                            ✎
+                          </ActionIcon>
+                        )}
+                      </Group>
+                      {editing.lastName ? (
+                        <TextInput
+                          required
+                          value={lastName}
+                          onChange={(event) => setLastName(event.currentTarget.value)}
+                          data-autofocus
+                        />
+                      ) : (
+                        <Text>{lastName}</Text>
+                      )}
+                    </Box>
+                  </SimpleGrid>
+
+                  <Box>
+                    <Group justify="space-between" mb={4}>
+                      <Text size="sm" fw={500}>Email</Text>
+                      {!editing.email && (
+                        <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => startEditing('email')} aria-label="Edit email">
+                          ✎
+                        </ActionIcon>
+                      )}
+                    </Group>
+                    {editing.email ? (
+                      <TextInput
+                        required
+                        value={email}
+                        onChange={(event) => setEmail(event.currentTarget.value)}
+                        data-autofocus
+                      />
+                    ) : (
+                      <Text>{email}</Text>
+                    )}
+                  </Box>
+
+                  <Box>
+                    <Group justify="space-between" mb={4}>
+                      <Text size="sm" fw={500}>Bio</Text>
+                      {!editing.bio && (
+                        <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => startEditing('bio')} aria-label="Edit bio">
+                          ✎
+                        </ActionIcon>
+                      )}
+                    </Group>
+                    {editing.bio ? (
+                      <Textarea
+                        placeholder="Tell others a bit about yourself"
+                        minRows={3}
+                        autosize
+                        value={bio}
+                        onChange={(event) => setBio(event.currentTarget.value)}
+                        data-autofocus
+                      />
+                    ) : bio ? (
+                      <Text style={{ whiteSpace: 'pre-wrap' }}>{bio}</Text>
+                    ) : (
+                      <Text c="dimmed" fs="italic">No bio yet.</Text>
+                    )}
+                  </Box>
+
+                  <Box>
+                    <Group justify="space-between" mb={4}>
+                      <Text size="sm" fw={500}>Interests</Text>
+                      {!editing.interests && (
+                        <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => startEditing('interests')} aria-label="Edit interests">
+                          ✎
+                        </ActionIcon>
+                      )}
+                    </Group>
+                    {editing.interests ? (
+                      <TagsInput
+                        placeholder={interests.length < 5 ? 'Add an interest' : undefined}
+                        description="Add up to 5 interests"
+                        maxTags={5}
+                        value={interests}
+                        onChange={setInterests}
+                        data-autofocus
+                      />
+                    ) : interests.length > 0 ? (
+                      <Group gap={6}>
+                        {interests.map((interest) => (
+                          <Badge key={interest} color="blue" variant="light">{interest}</Badge>
+                        ))}
+                      </Group>
+                    ) : (
+                      <Text c="dimmed" fs="italic">No interests yet.</Text>
+                    )}
+                  </Box>
+
+                  <Group justify="flex-end">
                     <Button type="submit" loading={isSaving}>
                       Save changes
                     </Button>
-                  </Stack>
-                </form>
-              </Paper>
+                  </Group>
+                </Stack>
+              </form>
+            </Paper>
 
-              <Paper withBorder p="md">
+            <Paper withBorder radius="md" p="xl">
+              <Group justify="space-between">
+                <Button variant="default" onClick={openPasswordModal}>
+                  Change password
+                </Button>
                 <Button color="red" variant="light" onClick={() => setIsDeleteOpen(true)}>
                   Delete account
                 </Button>
-              </Paper>
-            </Stack>
-          ) : (
-            <Text c="dimmed">This is {profileUser.firstName}'s profile.</Text>
-          )}
-        </Box>
+              </Group>
+            </Paper>
+          </Stack>
+        ) : (
+          <Paper withBorder radius="md" p="xl">
+            <Stack gap="lg">
+              <Box>
+                <Text size="sm" fw={600} c="dimmed" mb={6}>Bio</Text>
+                {profileUser.bio ? (
+                  <Text style={{ whiteSpace: 'pre-wrap' }}>{profileUser.bio}</Text>
+                ) : (
+                  <Text c="dimmed" fs="italic">
+                    {profileUser.firstName} hasn't added a bio yet.
+                  </Text>
+                )}
+              </Box>
 
-        <Paper withBorder p="md">
-          <Title order={4} mb="md">Timeline</Title>
-          <Timeline active={recentListings.length} bulletSize={14} lineWidth={2}>
-            {recentListings.map((listing) => (
-              <Timeline.Item key={listing.id} title={listing.title}>
-                <Text size="sm" c="dimmed">{listing.when}</Text>
-              </Timeline.Item>
-            ))}
-          </Timeline>
-        </Paper>
-      </Box>
+              <Divider />
+
+              <Box>
+                <Text size="sm" fw={600} c="dimmed" mb={6}>Interests</Text>
+                {profileUser.interests && profileUser.interests.length > 0 ? (
+                  <Group gap={6}>
+                    {profileUser.interests.map((interest) => (
+                      <Badge key={interest} color="blue" variant="light">{interest}</Badge>
+                    ))}
+                  </Group>
+                ) : (
+                  <Text c="dimmed" fs="italic">
+                    {profileUser.firstName} hasn't added any interests yet.
+                  </Text>
+                )}
+              </Box>
+            </Stack>
+          </Paper>
+        )}
+      </Container>
+
+      <Modal opened={isPfpOpen} onClose={() => setIsPfpOpen(false)} title="Change profile photo" centered>
+        <Stack>
+          <TextInput
+            label="Photo URL"
+            placeholder="https://example.com/photo.png"
+            type="url"
+            value={pfpDraft}
+            onChange={(event) => setPfpDraft(event.currentTarget.value)}
+            data-autofocus
+          />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setIsPfpOpen(false)} disabled={isSavingPfp}>
+              Cancel
+            </Button>
+            <Button onClick={handleSavePfp} loading={isSavingPfp}>
+              Save
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal opened={isPasswordOpen} onClose={() => setIsPasswordOpen(false)} title="Change password" centered>
+        <Stack>
+          {passwordError && <Alert color="red">{passwordError}</Alert>}
+          <PasswordInput
+            label="Current password"
+            value={currentPassword}
+            onChange={(event) => setCurrentPassword(event.currentTarget.value)}
+            data-autofocus
+          />
+          <PasswordInput
+            label="New password"
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.currentTarget.value)}
+          />
+          <Text size="xs" c="dimmed">
+            You'll be logged out after saving, so you can sign back in with your new password.
+          </Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setIsPasswordOpen(false)} disabled={isSavingPassword}>
+              Cancel
+            </Button>
+            <Button onClick={handleChangePassword} loading={isSavingPassword}>
+              Save changes
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       <Modal opened={isDeleteOpen} onClose={() => setIsDeleteOpen(false)} title="Delete account" centered>
         <Text mb="md">
