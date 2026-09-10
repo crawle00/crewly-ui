@@ -47,7 +47,10 @@ export async function getUser(id) {
   return response.data;
 }
 
-
+export async function getMyFaqQuestions() {
+  const response = await axios.get(`${API_URL}/faq/mine/questions`, requestConfig);
+  return response.data;
+}
 
 export async function createClub(club) {
   const response = await axios.post(`${API_URL}/clubs`, club, requestConfig);
@@ -161,6 +164,11 @@ export async function getReports(listingId) {
 export async function getVolunteers(listingId) {
   const response = await axios.get(`${API_URL}/jobs/listing/${listingId}/volunteers` , requestConfig)
   return response.data
+}
+
+export async function getVolunteering(userId) {
+  const response = await axios.get(`${API_URL}/jobs/volunteering/${userId}`, requestConfig);
+  return response.data.data ?? response.data;
 }
 
 export async function volunteerForListing(listingId) {

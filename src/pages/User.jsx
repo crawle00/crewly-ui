@@ -1,15 +1,45 @@
 import { useEffect, useState } from 'react'
-import { ActionIcon, Alert, Avatar, Badge, Box, Button, Container, Divider, Group, Modal, Paper, PasswordInput, SimpleGrid, Stack, TagsInput, Text, TextInput, Textarea, Title, UnstyledButton } from '@mantine/core'
+import { ActionIcon, Alert, Avatar, Badge, Box, Button, Container, Divider, Group, Modal, Paper, PasswordInput, SimpleGrid, Stack, Switch, TagsInput, Text, TextInput, Textarea, ThemeIcon, Timeline, Title, UnstyledButton, useMantineColorScheme } from '@mantine/core'
+import { IconClipboardList } from '@tabler/icons-react'
 import { useParams, useNavigate } from '../router'
-import { deleteAccount, getCurrentUser, getUser, logout, updateCurrentUser, getListings } from '../api/API'
+import { deleteAccount, getClub, getCurrentUser, getListings, getManagedClubs, getUser, logout, updateCurrentUser } from '../api/API'
+import defaultClubIcon from '../assets/default-club-icon.svg'
 
 function getErrorMessage(requestError) {
   return requestError.response?.data?.error?.message || 'Unable to complete the request.'
 }
 
+function formatTimelineDate(dateValue) {
+  if (!dateValue) return null
+  const date = new Date(dateValue)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function TimelineList({ events }) {
+  if (!events || events.length === 0) {
+    return <Text c="dimmed" fs="italic">No activity yet.</Text>
+  }
+  return (
+    <Timeline active={events.length} bulletSize={14} lineWidth={2}>
+      {events.map((event, index) => {
+        const dateLabel = formatTimelineDate(event.date || event.createdAt)
+        return (
+          <Timeline.Item key={event._id || event.id || index} title={event.title || event.label || 'Activity'}>
+            {event.description && <Text size="sm" c="dimmed">{event.description}</Text>}
+            {dateLabel && <Text size="xs" c="dimmed" mt={4}>{dateLabel}</Text>}
+          </Timeline.Item>
+        )
+      })}
+    </Timeline>
+  )
+}
+
 export default function User() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { colorScheme, setColorScheme } = useMantineColorScheme()
+  const isDarkMode = colorScheme === 'dark'
   const [currentUser, setCurrentUser] = useState(null)
   const [profileUser, setProfileUser] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -46,12 +76,7 @@ export default function User() {
   const [isSavingPassword, setIsSavingPassword] = useState(false)
   const [passwordError, setPasswordError] = useState('')
 
-  const [myListingsOpen, setMyListingsOpen] = useState("")
   const [myListings, setMyListings] = useState([])
-
-  const createdListings = myListings.filter(
-    (listing) => String(listing.createdBy) === String(User.id)
-  )
 
   useEffect(() => {
     let isMounted = true
@@ -100,23 +125,27 @@ export default function User() {
     }
   }, [id, navigate])
 
-  useEffect(() =>{
-    const loadMyListings = async () => {
-      try {
-        const user = await getCurrentUser()
-        const listings = await getListings()
-        const createdListings = listings.data.filter(
-          (listing) =>
-            String(listing.createdBy) === String(user._id),
-        )
+  useEffect(() => {
+    if (!currentUser || !profileUser || String(currentUser._id) !== String(profileUser._id)) return
+    let isMounted = true
 
+    getListings()
+      .then((response) => {
+        if (!isMounted) return
+        const listings = response.data ?? response
+        const createdListings = listings.filter(
+          (listing) => String(listing.createdBy) === String(currentUser._id),
+        )
         setMyListings(createdListings)
-      } catch (error) {
-        console.error("GET MY LISTINGS ERROR:", error.response?.data || error)
-      }
+      })
+      .catch((requestError) => {
+        console.error('GET MY LISTINGS ERROR:', requestError.response?.data || requestError)
+      })
+
+    return () => {
+      isMounted = false
     }
-    loadMyListings()
-  }, [])
+  }, [currentUser, profileUser])
 
   const isOwnProfile = currentUser && profileUser && String(currentUser._id) === String(profileUser._id)
 
@@ -339,7 +368,7 @@ export default function User() {
               <Stack gap="lg">
                 <Box pl="md" style={{ borderLeft: '3px solid var(--mantine-color-blue-3)' }}>
                   {bio ? (
-                    <Text fs="italic" style={{ whiteSpace: 'pre-wrap' }}>“{bio}”</Text>
+                    <Text fs="italic" style={{ whiteSpace: 'pre-wrap' }}>"{bio}"</Text>
                   ) : (
                     <Text c="dimmed" fs="italic">No bio yet.</Text>
                   )}
@@ -359,30 +388,72 @@ export default function User() {
                     <Text c="dimmed" fs="italic">No interests yet.</Text>
                   )}
                 </Box>
+
+                <Divider />
+
+                <Box>
+                  <Text size="sm" c="dimmed" mb={6}>Clubs</Text>
+                  {managedClubs.length > 0 ? (
+                    <Stack gap="sm">
+                      {managedClubs.map((club) => (
+                        <Group key={club._id} gap="sm" wrap="nowrap">
+                          <Avatar src={club.pfp || defaultClubIcon} radius="sm" size={36} />
+                          <Text>{club.name}</Text>
+                        </Group>
+                      ))}
+                    </Stack>
+                  ) : (
+                    <Text c="dimmed" fs="italic">You don't lead any clubs yet.</Text>
+                  )}
+                </Box>
               </Stack>
             </Paper>
 
             <Paper withBorder radius="md" p="xl">
-              <Title order={5} mb="md">Clubs</Title>
-              {managedClubs.length > 0 ? (
+              <Text size="sm" c="dimmed" mb="md">Timeline</Text>
+              <TimelineList events={profileUser.timeline} />
+            </Paper>
+
+            <Paper withBorder radius="md" p="xl">
+              <Text size="sm" c="dimmed" mb={6}>My listings</Text>
+              {myListings.length > 0 ? (
                 <Stack gap="sm">
-                  {managedClubs.map((club) => (
-                    <Group key={club._id} gap="sm" wrap="nowrap">
-                      <Avatar src={club.pfp || defaultClubIcon} radius="sm" size={36} />
-                      <Text>{club.name}</Text>
-                    </Group>
+                  {myListings.map((listing) => (
+                    <UnstyledButton
+                      key={listing._id}
+                      onClick={() => navigate(`/listings/${listing._id}`)}
+                      style={{ width: '100%' }}
+                    >
+                      <Group gap="sm" wrap="nowrap">
+                        <ThemeIcon variant="light" size={36} radius="sm" color="blue">
+                          <IconClipboardList size={18} />
+                        </ThemeIcon>
+                        <Text>{listing.title}</Text>
+                      </Group>
+                    </UnstyledButton>
                   ))}
                 </Stack>
               ) : (
-                <Text c="dimmed" fs="italic">You don't lead any clubs yet.</Text>
+                <Text c="dimmed" fs="italic">You haven't created any listings yet.</Text>
               )}
             </Paper>
 
             <Paper withBorder radius="md" p="xl">
               <Group justify="space-between">
-                <Button variant ="default" onClick={setMyListingsOpen}>
-                  My Listings
-                </Button>
+                <Box>
+                  <Text fw={600}>Dark mode</Text>
+                  <Text size="sm" c="dimmed">Switch between light and dark themes.</Text>
+                </Box>
+                <Switch
+                  checked={isDarkMode}
+                  onChange={(event) => setColorScheme(event.currentTarget.checked ? 'dark' : 'light')}
+                  aria-label="Toggle dark mode"
+                />
+              </Group>
+            </Paper>
+
+            <Paper withBorder radius="md" p="xl">
+              <Group justify="space-between">
                 <Button variant="default" onClick={openPasswordModal}>
                   Change password
                 </Button>
@@ -397,7 +468,7 @@ export default function User() {
             <Stack gap="lg">
               <Box pl="md" style={{ borderLeft: '3px solid var(--mantine-color-blue-3)' }}>
                 {profileUser.bio ? (
-                  <Text fs="italic" style={{ whiteSpace: 'pre-wrap' }}>“{profileUser.bio}”</Text>
+                  <Text fs="italic" style={{ whiteSpace: 'pre-wrap' }}>"{profileUser.bio}"</Text>
                 ) : (
                   <Text c="dimmed" fs="italic">
                     {profileUser.firstName} hasn't added a bio yet.
@@ -440,6 +511,13 @@ export default function User() {
                     {profileUser.firstName} doesn't lead any clubs yet.
                   </Text>
                 )}
+              </Box>
+
+              <Divider />
+
+              <Box>
+                <Text size="sm" fw={600} c="dimmed" mb={6}>Timeline</Text>
+                <TimelineList events={profileUser.timeline} />
               </Box>
 
               {profileUser.createdAt && (
@@ -565,31 +643,6 @@ export default function User() {
             Delete account
           </Button>
         </Group>
-      </Modal>
-
-      <Modal opened={myListingsOpen} onClose={() => setMyListingsOpen(false)} title="My Listings" centered>
-        <Stack>
-            {myListings.length === 0 ? (
-              <Text c="dimmed" ta="center">
-                You currently have no listings.
-              </Text>
-            ) : (
-              myListings.map((listing) => (
-                <Paper 
-                  key={listing._id}
-                  withBorder p="md" 
-                  radius="md" 
-                  style={{cursor: "pointer"}} 
-                  onClick={() => {
-                    setMyListingsOpen(false) 
-                    navigate(`/listings/${listing._id}`)
-                  }}
-                >
-                  <Text fw="700">{listing.title}</Text>
-                </Paper>
-              ))
-            )}
-        </Stack>
       </Modal>
     </Box>
   )

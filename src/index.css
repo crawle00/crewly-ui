@@ -104,7 +104,7 @@ body {
   box-sizing: border-box;
   align-items: flex-start;
   overflow-y: auto;
-  background: #fff;
+  background: var(--mantine-color-body);
 }
 
 .login-content {
