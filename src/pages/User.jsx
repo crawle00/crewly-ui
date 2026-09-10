@@ -21,18 +21,17 @@ export default function User() {
   const [email, setEmail] = useState('')
   const [bio, setBio] = useState('')
   const [interests, setInterests] = useState([])
-  const [isSaving, setIsSaving] = useState(false)
+  const [managedClubs, setManagedClubs] = useState([])
+  const [profileClubs, setProfileClubs] = useState([])
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const [editing, setEditing] = useState({
-    firstName: false,
-    lastName: false,
-    email: false,
-    bio: false,
-    interests: false,
-  })
-  const startEditing = (field) => setEditing((prev) => ({ ...prev, [field]: true }))
-  const resetEditing = () => setEditing({ firstName: false, lastName: false, email: false, bio: false, interests: false })
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [draftFirstName, setDraftFirstName] = useState('')
+  const [draftLastName, setDraftLastName] = useState('')
+  const [draftEmail, setDraftEmail] = useState('')
+  const [draftBio, setDraftBio] = useState('')
+  const [draftInterests, setDraftInterests] = useState([])
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
 
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -70,6 +69,21 @@ export default function User() {
           setEmail(profile.email)
           setBio(profile.bio || '')
           setInterests(profile.interests || [])
+          getManagedClubs()
+            .then((clubs) => {
+              if (isMounted) setManagedClubs(clubs)
+            })
+            .catch(() => {
+              if (isMounted) setManagedClubs([])
+            })
+        } else if (profile.clubManagement && profile.clubManagement.length > 0) {
+          Promise.all(profile.clubManagement.map((clubId) => getClub(clubId)))
+            .then((clubs) => {
+              if (isMounted) setProfileClubs(clubs)
+            })
+            .catch(() => {
+              if (isMounted) setProfileClubs([])
+            })
         }
       })
       .catch((requestError) => {
@@ -106,22 +120,43 @@ export default function User() {
 
   const isOwnProfile = currentUser && profileUser && String(currentUser._id) === String(profileUser._id)
 
-  const handleSave = async (event) => {
+  const openEditModal = () => {
+    setDraftFirstName(firstName)
+    setDraftLastName(lastName)
+    setDraftEmail(email)
+    setDraftBio(bio)
+    setDraftInterests(interests)
+    setError('')
+    setIsEditOpen(true)
+  }
+
+  const handleSaveProfile = async (event) => {
     event.preventDefault()
-    setIsSaving(true)
+    setIsSavingProfile(true)
     setError('')
     setSuccessMessage('')
     try {
-      const updates = { firstName, lastName, email, bio, interests }
+      const updates = {
+        firstName: draftFirstName,
+        lastName: draftLastName,
+        email: draftEmail,
+        bio: draftBio,
+        interests: draftInterests,
+      }
       const updatedUser = await updateCurrentUser(updates)
       setCurrentUser(updatedUser)
       setProfileUser(updatedUser)
-      resetEditing()
+      setFirstName(updatedUser.firstName)
+      setLastName(updatedUser.lastName)
+      setEmail(updatedUser.email)
+      setBio(updatedUser.bio || '')
+      setInterests(updatedUser.interests || [])
+      setIsEditOpen(false)
       setSuccessMessage('Your changes have been saved.')
     } catch (requestError) {
       setError(getErrorMessage(requestError))
     } finally {
-      setIsSaving(false)
+      setIsSavingProfile(false)
     }
   }
 
@@ -214,16 +249,28 @@ export default function User() {
             }}
           />
           {isOwnProfile && (
-            <Button
-              variant="white"
-              color="blue"
-              size="xs"
-              onClick={handleLogout}
-              loading={isLoggingOut}
-              style={{ position: 'absolute', top: 12, right: 12 }}
-            >
-              Log out
-            </Button>
+            <>
+              <ActionIcon
+                variant="white"
+                color="blue"
+                size="lg"
+                onClick={openEditModal}
+                aria-label="Edit profile details"
+                style={{ position: 'absolute', top: 12, left: 12 }}
+              >
+                ✎
+              </ActionIcon>
+              <Button
+                variant="white"
+                color="blue"
+                size="xs"
+                onClick={handleLogout}
+                loading={isLoggingOut}
+                style={{ position: 'absolute', top: 12, right: 12 }}
+              >
+                Log out
+              </Button>
+            </>
           )}
         </Box>
         <Stack align="center" gap={2} mt={-46} mb="xl">
@@ -289,136 +336,46 @@ export default function User() {
         {isOwnProfile ? (
           <Stack gap="lg">
             <Paper withBorder radius="md" p="xl">
-              <form onSubmit={handleSave}>
-                <Stack gap="md">
-                  <Title order={5}>Profile details</Title>
+              <Stack gap="lg">
+                <Box pl="md" style={{ borderLeft: '3px solid var(--mantine-color-blue-3)' }}>
+                  {bio ? (
+                    <Text fs="italic" style={{ whiteSpace: 'pre-wrap' }}>“{bio}”</Text>
+                  ) : (
+                    <Text c="dimmed" fs="italic">No bio yet.</Text>
+                  )}
+                </Box>
 
-                  <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                    <Box>
-                      <Group justify="space-between" mb={4}>
-                        <Text size="sm" fw={500}>First name</Text>
-                        {!editing.firstName && (
-                          <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => startEditing('firstName')} aria-label="Edit first name">
-                            ✎
-                          </ActionIcon>
-                        )}
-                      </Group>
-                      {editing.firstName ? (
-                        <TextInput
-                          required
-                          value={firstName}
-                          onChange={(event) => setFirstName(event.currentTarget.value)}
-                          data-autofocus
-                        />
-                      ) : (
-                        <Text>{firstName}</Text>
-                      )}
-                    </Box>
+                <Divider />
 
-                    <Box>
-                      <Group justify="space-between" mb={4}>
-                        <Text size="sm" fw={500}>Last name</Text>
-                        {!editing.lastName && (
-                          <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => startEditing('lastName')} aria-label="Edit last name">
-                            ✎
-                          </ActionIcon>
-                        )}
-                      </Group>
-                      {editing.lastName ? (
-                        <TextInput
-                          required
-                          value={lastName}
-                          onChange={(event) => setLastName(event.currentTarget.value)}
-                          data-autofocus
-                        />
-                      ) : (
-                        <Text>{lastName}</Text>
-                      )}
-                    </Box>
-                  </SimpleGrid>
-
-                  <Box>
-                    <Group justify="space-between" mb={4}>
-                      <Text size="sm" fw={500}>Email</Text>
-                      {!editing.email && (
-                        <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => startEditing('email')} aria-label="Edit email">
-                          ✎
-                        </ActionIcon>
-                      )}
+                <Box>
+                  <Text size="sm" c="dimmed" mb={6}>Interests</Text>
+                  {interests.length > 0 ? (
+                    <Group gap={6}>
+                      {interests.map((interest) => (
+                        <Badge key={interest} color="blue" variant="light">{interest}</Badge>
+                      ))}
                     </Group>
-                    {editing.email ? (
-                      <TextInput
-                        required
-                        value={email}
-                        onChange={(event) => setEmail(event.currentTarget.value)}
-                        data-autofocus
-                      />
-                    ) : (
-                      <Text>{email}</Text>
-                    )}
-                  </Box>
+                  ) : (
+                    <Text c="dimmed" fs="italic">No interests yet.</Text>
+                  )}
+                </Box>
+              </Stack>
+            </Paper>
 
-                  <Box>
-                    <Group justify="space-between" mb={4}>
-                      <Text size="sm" fw={500}>Bio</Text>
-                      {!editing.bio && (
-                        <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => startEditing('bio')} aria-label="Edit bio">
-                          ✎
-                        </ActionIcon>
-                      )}
+            <Paper withBorder radius="md" p="xl">
+              <Title order={5} mb="md">Clubs</Title>
+              {managedClubs.length > 0 ? (
+                <Stack gap="sm">
+                  {managedClubs.map((club) => (
+                    <Group key={club._id} gap="sm" wrap="nowrap">
+                      <Avatar src={club.pfp || defaultClubIcon} radius="sm" size={36} />
+                      <Text>{club.name}</Text>
                     </Group>
-                    {editing.bio ? (
-                      <Textarea
-                        placeholder="Tell others a bit about yourself"
-                        minRows={3}
-                        autosize
-                        value={bio}
-                        onChange={(event) => setBio(event.currentTarget.value)}
-                        data-autofocus
-                      />
-                    ) : bio ? (
-                      <Text style={{ whiteSpace: 'pre-wrap' }}>{bio}</Text>
-                    ) : (
-                      <Text c="dimmed" fs="italic">No bio yet.</Text>
-                    )}
-                  </Box>
-
-                  <Box>
-                    <Group justify="space-between" mb={4}>
-                      <Text size="sm" fw={500}>Interests</Text>
-                      {!editing.interests && (
-                        <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => startEditing('interests')} aria-label="Edit interests">
-                          ✎
-                        </ActionIcon>
-                      )}
-                    </Group>
-                    {editing.interests ? (
-                      <TagsInput
-                        placeholder={interests.length < 5 ? 'Add an interest' : undefined}
-                        description="Add up to 5 interests"
-                        maxTags={5}
-                        value={interests}
-                        onChange={setInterests}
-                        data-autofocus
-                      />
-                    ) : interests.length > 0 ? (
-                      <Group gap={6}>
-                        {interests.map((interest) => (
-                          <Badge key={interest} color="blue" variant="light">{interest}</Badge>
-                        ))}
-                      </Group>
-                    ) : (
-                      <Text c="dimmed" fs="italic">No interests yet.</Text>
-                    )}
-                  </Box>
-
-                  <Group justify="flex-end">
-                    <Button type="submit" loading={isSaving}>
-                      Save changes
-                    </Button>
-                  </Group>
+                  ))}
                 </Stack>
-              </form>
+              ) : (
+                <Text c="dimmed" fs="italic">You don't lead any clubs yet.</Text>
+              )}
             </Paper>
 
             <Paper withBorder radius="md" p="xl">
@@ -438,10 +395,9 @@ export default function User() {
         ) : (
           <Paper withBorder radius="md" p="xl">
             <Stack gap="lg">
-              <Box>
-                <Text size="sm" fw={600} c="dimmed" mb={6}>Bio</Text>
+              <Box pl="md" style={{ borderLeft: '3px solid var(--mantine-color-blue-3)' }}>
                 {profileUser.bio ? (
-                  <Text style={{ whiteSpace: 'pre-wrap' }}>{profileUser.bio}</Text>
+                  <Text fs="italic" style={{ whiteSpace: 'pre-wrap' }}>“{profileUser.bio}”</Text>
                 ) : (
                   <Text c="dimmed" fs="italic">
                     {profileUser.firstName} hasn't added a bio yet.
@@ -465,10 +421,88 @@ export default function User() {
                   </Text>
                 )}
               </Box>
+
+              <Divider />
+
+              <Box>
+                <Text size="sm" fw={600} c="dimmed" mb={6}>Clubs</Text>
+                {profileClubs.length > 0 ? (
+                  <Stack gap="sm">
+                    {profileClubs.map((club) => (
+                      <Group key={club._id} gap="sm" wrap="nowrap">
+                        <Avatar src={club.pfp || defaultClubIcon} radius="sm" size={36} />
+                        <Text>{club.name}</Text>
+                      </Group>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Text c="dimmed" fs="italic">
+                    {profileUser.firstName} doesn't lead any clubs yet.
+                  </Text>
+                )}
+              </Box>
+
+              {profileUser.createdAt && (
+                <Text size="sm" c="dimmed">
+                  Member since {new Date(profileUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </Text>
+              )}
             </Stack>
           </Paper>
         )}
       </Container>
+
+      <Modal opened={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit profile details" centered size="md">
+        <form onSubmit={handleSaveProfile}>
+          <Stack>
+            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <TextInput
+                label="First name"
+                required
+                value={draftFirstName}
+                onChange={(event) => setDraftFirstName(event.currentTarget.value)}
+                data-autofocus
+              />
+              <TextInput
+                label="Last name"
+                required
+                value={draftLastName}
+                onChange={(event) => setDraftLastName(event.currentTarget.value)}
+              />
+            </SimpleGrid>
+            <TextInput
+              label="Email"
+              required
+              value={draftEmail}
+              onChange={(event) => setDraftEmail(event.currentTarget.value)}
+            />
+            <Textarea
+              label="Bio"
+              placeholder="Tell others a bit about yourself"
+              minRows={3}
+              autosize
+              value={draftBio}
+              onChange={(event) => setDraftBio(event.currentTarget.value)}
+            />
+            <TagsInput
+              label="Interests"
+              placeholder={draftInterests.length < 5 ? 'Add an interest' : undefined}
+              description="Add up to 5 interests"
+              maxTags={5}
+              value={draftInterests}
+              onChange={setDraftInterests}
+            />
+            <Group justify="flex-end">
+              <Button variant="default" onClick={() => setIsEditOpen(false)} disabled={isSavingProfile}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={isSavingProfile}>
+                Save changes
+              </Button>
+            </Group>
+          </Stack>
+        </form>
+      </Modal>
 
       <Modal opened={isPfpOpen} onClose={() => setIsPfpOpen(false)} title="Change profile photo" centered>
         <Stack>
