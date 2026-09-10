@@ -590,8 +590,8 @@ function Listings(){
                                             </Stack>
                                         )}
 
-                                        <Box ml="lg" bg="gray.1" style={{borderRadius: "5px"}}>
-                                            <Stack mt="xs" ml={50}>
+                                        <Box ml="lg" bg="gray.1" style={{borderRadius: "5px" , minWidth: 0, maxWidth: "100%" , overflow: "hidden"}}>
+                                            <Stack mt="xs" ml={{base: 1, sm: 1}}>
                                                 {item.replies?.filter(
                                                     (reply) => reply.parentReplyId === null
                                                 ).map((reply) => (

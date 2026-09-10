@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ActionIcon, Alert, Avatar, Badge, Box, Button, Container, Divider, Group, Modal, Paper, PasswordInput, SimpleGrid, Stack, TagsInput, Text, TextInput, Textarea, Title, UnstyledButton } from '@mantine/core'
 import { useParams, useNavigate } from '../router'
-import { deleteAccount, getCurrentUser, getUser, logout, updateCurrentUser } from '../api/API'
+import { deleteAccount, getCurrentUser, getUser, logout, updateCurrentUser, getListings } from '../api/API'
 
 function getErrorMessage(requestError) {
   return requestError.response?.data?.error?.message || 'Unable to complete the request.'
@@ -47,6 +47,13 @@ export default function User() {
   const [isSavingPassword, setIsSavingPassword] = useState(false)
   const [passwordError, setPasswordError] = useState('')
 
+  const [myListingsOpen, setMyListingsOpen] = useState("")
+  const [myListings, setMyListings] = useState([])
+
+  const createdListings = myListings.filter(
+    (listing) => String(listing.createdBy) === String(User.id)
+  )
+
   useEffect(() => {
     let isMounted = true
     setIsLoading(true)
@@ -78,6 +85,24 @@ export default function User() {
       isMounted = false
     }
   }, [id, navigate])
+
+  useEffect(() =>{
+    const loadMyListings = async () => {
+      try {
+        const user = await getCurrentUser()
+        const listings = await getListings()
+        const createdListings = listings.data.filter(
+          (listing) =>
+            String(listing.createdBy) === String(user._id),
+        )
+
+        setMyListings(createdListings)
+      } catch (error) {
+        console.error("GET MY LISTINGS ERROR:", error.response?.data || error)
+      }
+    }
+    loadMyListings()
+  }, [])
 
   const isOwnProfile = currentUser && profileUser && String(currentUser._id) === String(profileUser._id)
 
@@ -398,6 +423,9 @@ export default function User() {
 
             <Paper withBorder radius="md" p="xl">
               <Group justify="space-between">
+                <Button variant ="default" onClick={setMyListingsOpen}>
+                  My Listings
+                </Button>
                 <Button variant="default" onClick={openPasswordModal}>
                   Change password
                 </Button>
@@ -503,6 +531,31 @@ export default function User() {
             Delete account
           </Button>
         </Group>
+      </Modal>
+
+      <Modal opened={myListingsOpen} onClose={() => setMyListingsOpen(false)} title="My Listings" centered>
+        <Stack>
+            {myListings.length === 0 ? (
+              <Text c="dimmed" ta="center">
+                You currently have no listings.
+              </Text>
+            ) : (
+              myListings.map((listing) => (
+                <Paper 
+                  key={listing._id}
+                  withBorder p="md" 
+                  radius="md" 
+                  style={{cursor: "pointer"}} 
+                  onClick={() => {
+                    setMyListingsOpen(false) 
+                    navigate(`/listings/${listing._id}`)
+                  }}
+                >
+                  <Text fw="700">{listing.title}</Text>
+                </Paper>
+              ))
+            )}
+        </Stack>
       </Modal>
     </Box>
   )
