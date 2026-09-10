@@ -78,19 +78,19 @@ function ListingCard({ listing, onOpen }) {
             <ThemeIcon variant="light" size="sm" color="blue" aria-hidden="true">
               <IconCalendarEvent size={15} />
             </ThemeIcon>
-            <Text size="sm" c="dark.7">{formatDateRange(listing.startsAt, listing.endsAt)}</Text>
+            <Text size="sm">{formatDateRange(listing.startsAt, listing.endsAt)}</Text>
           </Group>
           <Group gap="xs" wrap="nowrap" align="flex-start">
             <ThemeIcon variant="light" size="sm" color="blue" aria-hidden="true">
               <IconMapPin size={15} />
             </ThemeIcon>
-            <Text size="sm" c="dark.7">{location}</Text>
+            <Text size="sm">{location}</Text>
           </Group>
           <Group gap="xs" wrap="nowrap" align="flex-start">
             <ThemeIcon variant="light" size="sm" color="blue" aria-hidden="true">
               <IconUsers size={15} />
             </ThemeIcon>
-            <Text size="sm" c="dark.7">
+            <Text size="sm">
               {volunteerCount} volunteer{volunteerCount === 1 ? '' : 's'}{listing.capacity ? ` of ${listing.capacity} needed` : ''}
             </Text>
           </Group>

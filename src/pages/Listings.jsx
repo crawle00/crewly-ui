@@ -380,7 +380,7 @@ function Listings(){
                     p = "lg"
                     w = {{base: "95%", sm: "90%", md: "60%"}}
                     mx = "auto"
-                    bg = "#fafafa"
+                    bg="var(--mantine-color-body)"
                     style = {{border: "1px solid var(--mantine-color-blue-9)" , borderRadius: "8px" , textAlign: "center"}}  
                 >
                     {listings.bannerImage && (
@@ -514,7 +514,7 @@ function Listings(){
                     p = "lg"
                     w = {{base: "95%", sm: "90%", md: "60%"}}
                     mx = "auto"
-                    bg = "#fafafa"
+                    bg="var(--mantine-color-body)"
                     style = {{border: "1px solid var(--mantine-color-blue-9)" , borderRadius: "8px" , textAlign: "center"}}
                 >
                     <Title order={2} mb="md">Frequently Asked Questions & Answers</Title>

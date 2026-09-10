@@ -225,7 +225,7 @@ export default function Admin() {
                       {(club.leaders || []).map((leaderId) => {
                         const leader = userById.get(String(leaderId))
                         return leader ? (
-                          <Anchor key={String(leaderId)} component={RouterLink} to={`/users/${leaderId}`} c="black" size="sm">
+                          <Anchor key={String(leaderId)} component={RouterLink} to={`/users/${leaderId}`} size="sm" underline="hover" c="inherit" >
                             {leader.firstName} {leader.lastName}
                           </Anchor>
                         ) : (
