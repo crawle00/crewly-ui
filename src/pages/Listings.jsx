@@ -585,7 +585,7 @@ function Listings(){
                                                 <Group justify="flex-end">
                                                     <Button size="xs" onClick={() => handleSubmitReply(replyTo.questionId , replyTo.replyId)}>
                                                         Submit Reply
-                                                    </Button>
+                                                    </Button> 
                                                 </Group>
                                             </Stack>
                                         )}
