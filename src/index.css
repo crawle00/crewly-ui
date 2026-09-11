@@ -91,6 +91,15 @@ body {
   }
 }
 
+.site-notification-button {
+  border-radius: 4px;
+  transition: background-color 160ms ease;
+}
+
+.site-notification-button:hover {
+  background-color: rgb(255 255 255 / 8%);
+}
+
 .login-shell {
   min-height: 100svh;
   overflow: hidden;

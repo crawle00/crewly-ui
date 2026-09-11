@@ -132,28 +132,18 @@ function AppRoutes() {
 
   const notificationBell = (
     <Indicator label={notificationCount} size={16} disabled={notificationCount === 0} color="red" offset={4}>
-      <ActionIcon variant="subtle" color="white" size="lg" onClick={toggleNotifications} aria-label="Notifications">
+      <ActionIcon
+        className="site-notification-button"
+        variant="transparent"
+        color="white"
+        size="lg"
+        onClick={toggleNotifications}
+        aria-label="Notifications"
+      >
         <IconBell size={20} />
       </ActionIcon>
     </Indicator>
   )
-
-  const navLinksWithBell = navItems.map(({ to, label }, index) => (
-    <Group key={to} gap="md" wrap="nowrap">
-      <Anchor
-        component={Link}
-        to={to}
-        className="site-nav-link"
-        c={pathname === to ? 'white' : 'blue.1'}
-        fw={pathname === to ? 600 : 500}
-        underline="never"
-        aria-current={pathname === to ? 'page' : undefined}
-      >
-        {label}
-      </Anchor>
-      {index === 0 && notificationBell}
-    </Group>
-  ))
 
   const navLinks = navItems.map(({ to, label }) => (
     <Anchor
@@ -179,11 +169,10 @@ function AppRoutes() {
             <Anchor className="site-brand" component={Link} to="/" aria-label="Crewly home">
               <Image src={crewlyLogoLight} alt="Crewly" w={{ base: 112, sm: 140 }} fit="contain" />
             </Anchor>
-            <Box hiddenFrom="sm">{notificationBell}</Box>
           </Group>
 
           <Group className="site-desktop-nav" visibleFrom="sm" gap="lg" wrap="nowrap">
-            {navLinksWithBell}
+            {navLinks}
             <Box className="site-nav-divider" w={1} h={28} bg="blue.7" />
             <Anchor
               className="site-account-link"
@@ -199,19 +188,22 @@ function AppRoutes() {
                 <Text size="sm" fw={500}>{accountName}</Text>
               </Group>
             </Anchor>
+            {notificationBell}
           </Group>
 
-          <Anchor
-            className="site-mobile-account site-account-link"
-            component={Link}
-            to={accountHref}
-            hiddenFrom="sm"
-            aria-label={accountName}
-            data-active={isAccountActive || undefined}
-            aria-current={isAccountActive ? 'page' : undefined}
-          >
-            {accountAvatar}
-          </Anchor>
+          <Group hiddenFrom="sm" gap="xs" wrap="nowrap">
+            <Anchor
+              className="site-mobile-account site-account-link"
+              component={Link}
+              to={accountHref}
+              aria-label={accountName}
+              data-active={isAccountActive || undefined}
+              aria-current={isAccountActive ? 'page' : undefined}
+            >
+              {accountAvatar}
+            </Anchor>
+            {notificationBell}
+          </Group>
           <Drawer.Root opened={notificationsOpened} onClose={closeNotifications} position="right" size="sm">
             <Drawer.Overlay />
             <Drawer.Content>
