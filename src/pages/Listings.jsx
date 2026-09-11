@@ -13,10 +13,7 @@ function ReplyItem({
     setReplyText,
     handleSubmitReply,
 }) {
-    const childReplies = replies.filter(
-        (child) =>
-            String(child.parentReplyId) === String(reply._id)
-    )
+    const childReplies = replies || []
 
     const [showReplies, setShowReplies] = useState(false)
 
@@ -24,39 +21,45 @@ function ReplyItem({
         <Stack mt="sm">
             <Group>
                 <Avatar src={reply.pfp} size="sm" />
-                <Text size="xs" c ="dimmed">{reply.firstName}{" "}{reply.lastName}</Text>
-                <Text size="sm">{reply.reply}</Text>
+                <Text size="xs" c="dimmed">
+                    {reply.firstName}{" "}{reply.lastName}
+                </Text>
+
+                <Text size="sm">
+                    {reply.reply}
+                </Text>
+
                 <Button
-                    variant = "subtle"
-                    size = "xs"
+                    variant="subtle"
+                    size="xs"
                     onClick={() => {
-                    setReplyTo({
-                        questionId,
-                        replyId: reply._id
-                    })
+                        setReplyTo({
+                            questionId,
+                            replyId: reply._id
+                        })
                         setReplyText("")
                     }}
                 >
-                     Reply
+                    Reply
                 </Button>
-                <Group w ="100%" justify="flex-end" color="var(--mantine-color-blue-9)">
-                     {childReplies.length > 0 && (
-                        <Button
-                            variant="subtle"
-                            size="xs"
-                            onClick={() => setShowReplies(!showReplies)}
-                        >
-                            {showReplies
-                                ? "Hide replies"
-                                : `View ${childReplies.length} ${
-                                    childReplies.length === 1
-                                        ? "reply"
-                                        : "replies"
-                                }`
-                            }
-                        </Button>
-                    )}
-                </Group>
+
+                {reply.replies?.length > 0 && (
+                    <Button
+                        type="button"
+                        variant="subtle"
+                        size="xs"
+                        onClick={() => setShowReplies(!showReplies)}
+                    >
+                        {showReplies
+                            ? "Hide replies"
+                            : `View ${reply.replies.length} ${
+                                reply.replies.length === 1
+                                    ? "reply"
+                                    : "replies"
+                            }`
+                        }
+                    </Button>
+                )}
             </Group>
 
             {replyTo?.questionId === questionId && 
@@ -95,7 +98,7 @@ function ReplyItem({
                                         key={childReply._id}
                                         reply={childReply}
                                         questionId={questionId}
-                                        replies={replies}
+                                        replies={childReply.replies}
                                         replyTo={replyTo}
                                         setReplyTo={setReplyTo}
                                         replyText={replyText}
@@ -152,9 +155,13 @@ function Listings(){
         } catch (error) {
             console.error("SUBMIT FAQ ERROR:", error.response?.data || error)
             }
-        }
+    }
 
     const handleSubmitReply = async (questionId, parentReplyId = null) => {
+        console.log("SUBMIT REPLY")
+    console.log("questionId:", questionId)
+    console.log("parentReplyId:", parentReplyId)
+    console.log("replyText:", replyText)
         if(!replyText.trim()) return
 
         try {
@@ -197,7 +204,7 @@ function Listings(){
         } catch (error) {
             console.error("SUBMIT REPORT ERROR:", error.response?.data || error)
             }
-        }
+    }
 
     //listing Owner Side
     const handleOpenEdit = () => {
@@ -310,7 +317,7 @@ function Listings(){
             console.log("GET CURRENT USER ERROR:" , error.response?.status, error.response?.data)
         })
     }, [])
-    useEffect(() => {
+    useEffect(() => {   
         if (!listings) return
         getClub(listings.clubId).then((data) => {
                 setClub(data)
@@ -324,7 +331,11 @@ function Listings(){
     const isOwner =
         currentUser &&
         listings &&
-        String(currentUser._id) === String(listings.createdBy)
+        club &&
+        String(club._id) === String(listings.clubId) &&
+        club.leaders?.some(
+            (leaderId) => String(leaderId) === String(currentUser._id)
+        )
 
     if (loading) {
         return (
@@ -371,7 +382,7 @@ function Listings(){
                                 <Button onClick={handleSaveEdit}>Save Changes</Button>
                             </Group>
                         </Modal>
-                        <Button color ={listings.isCancelled ? "var(--mantine-color-blue-9)" : "red"} onClick={handleCancelListing}>{listings.isCancelled ? "Open Listing" : "Cancel Listing"}</Button>
+                    <Button color ={listings.isCancelled ? "var(--mantine-color-blue-9)" : "red"} onClick={handleCancelListing}>{listings.isCancelled ? "Open Listing" : "Cancel Listing"}</Button>
                 </Group>
             )}
             <Stack gap = "x1">
@@ -583,7 +594,9 @@ function Listings(){
                                                 />
 
                                                 <Group justify="flex-end">
-                                                    <Button size="xs" onClick={() => handleSubmitReply(replyTo.questionId , replyTo.replyId)}>
+                                                    <Button size="xs" type="button" onClick={() => {
+                                                        handleSubmitReply(replyTo.questionId , replyTo.replyId)}}
+                                                    >
                                                         Submit Reply
                                                     </Button>
                                                 </Group>
@@ -592,14 +605,12 @@ function Listings(){
 
                                         <Box ml="lg" bg="gray.1" style={{borderRadius: "5px" , minWidth: 0, maxWidth: "100%" , overflow: "hidden"}}>
                                             <Stack mt="xs" ml={{base: 1, sm: 1}}>
-                                                {item.replies?.filter(
-                                                    (reply) => reply.parentReplyId === null
-                                                ).map((reply) => (
+                                                {item.replies?.map((reply) => (
                                                     <ReplyItem
                                                         key={reply._id}
                                                         reply={reply}
                                                         questionId={item._id}
-                                                        replies={item.replies}
+                                                        replies={reply.replies}
                                                         replyTo={replyTo}
                                                         setReplyTo={setReplyTo}
                                                         replyText={replyText}
