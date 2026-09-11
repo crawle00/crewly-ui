@@ -17,7 +17,7 @@ import {
   Text,
   TextInput,
 } from '@mantine/core'
-import { addClubLeader, createClub, deleteClub, getClubs, getUsers, getVerificationCodes, removeClubLeader, updateClub } from '../api/API'
+import { addClubLeader, createClub, deleteClub, getClubs, getUsers, removeClubLeader, updateClub } from '../api/API'
 import { Link as RouterLink, useNavigate } from '../router'
 import defaultClubIcon from '../assets/default-club-icon.svg'
 
@@ -45,7 +45,6 @@ export default function Admin() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUpdatingClub, setIsUpdatingClub] = useState(false)
   const [isUpdatingLeader, setIsUpdatingLeader] = useState(false)
-  const [verificationCodes, setVerificationCodes] = useState([])
   const navigate = useNavigate()
 
   const loadClubs = async () => {
@@ -72,15 +71,6 @@ export default function Admin() {
         setError(getErrorMessage(requestError))
       })
   }, [navigate])
-
-  useEffect(() => {
-    getVerificationCodes()
-      .then(setVerificationCodes)
-      .catch((requestError) => {
-        if (requestError.response?.status === 401 || requestError.response?.status === 403) return
-        setError(getErrorMessage(requestError))
-      })
-  }, [])
 
   useEffect(() => {
     loadClubs()
@@ -125,7 +115,6 @@ export default function Admin() {
       setIsManageOpen(false)
       setSelectedClub(null)
       await loadClubs()
-      setVerificationCodes(await getVerificationCodes())
     } catch (requestError) {
       setError(getErrorMessage(requestError))
     } finally {
@@ -275,47 +264,6 @@ export default function Admin() {
           <Pagination total={Math.max(totalPages, 1)} value={page} onChange={setPage} disabled={isLoading} />
         </Group>
       </div>
-
-      <Stack gap="sm" mt="xl">
-        <Text fw={600} size="lg">Verification codes</Text>
-        <Table.ScrollContainer minWidth={500}>
-          <Table verticalSpacing="sm" highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Code</Table.Th>
-                <Table.Th>Listing</Table.Th>
-                <Table.Th>Created</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {verificationCodes.map((verificationCode) => (
-                <Table.Tr key={verificationCode._id}>
-                  <Table.Td>
-                    <Text ff="monospace" fw={600}>{verificationCode.code}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Anchor component={RouterLink} to={`/listings/${verificationCode.listingId}`} size="sm" underline="hover" c="inherit">
-                      {verificationCode.listingTitle || 'Deleted listing'}
-                    </Anchor>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm" c="dimmed">
-                      {new Date(verificationCode.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </Text>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-              {verificationCodes.length === 0 && (
-                <Table.Tr>
-                  <Table.Td colSpan={3}>
-                    <Text ta="center" c="dimmed" py="xl">No verification codes yet.</Text>
-                  </Table.Td>
-                </Table.Tr>
-              )}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
-      </Stack>
 
       <Modal opened={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create club" centered>
         <form onSubmit={handleCreate}>

@@ -1,9 +1,17 @@
 import { useState } from 'react'
 import { Button, Group, Modal, PinInput, Stack, Text, ThemeIcon } from '@mantine/core'
+import { useMediaQuery } from '@mantine/hooks'
 import { IconCheck } from '@tabler/icons-react'
 import { redeemVerificationCode } from '../api/API'
 
 const CODE_LENGTH = 6
+
+// Let the code boxes shrink to fit narrow screens instead of forcing a fixed 350px row.
+const pinInputStyles = {
+  root: { width: '100%', justifyContent: 'center', flexWrap: 'nowrap' },
+  pinInput: { flex: 1, minWidth: 0, maxWidth: 52 },
+  input: { width: '100%' },
+}
 
 function getErrorMessage(requestError) {
   return requestError.response?.data?.error?.message || 'Unable to check in right now.'
@@ -14,6 +22,8 @@ export default function CheckInDialog({ opened, onClose, onCheckedIn, onViewTime
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isCheckedIn, setIsCheckedIn] = useState(false)
+  // On phones, keep the dialog near the top so the on-screen keyboard doesn't cover it.
+  const isMobile = useMediaQuery('(max-width: 36em)')
 
   // Reset once the close animation finishes so the dialog doesn't visibly flash back to empty.
   const reset = () => {
@@ -39,7 +49,7 @@ export default function CheckInDialog({ opened, onClose, onCheckedIn, onViewTime
   }
 
   return (
-    <Modal opened={opened} onClose={onClose} onExitTransitionEnd={reset} title="Check in to an event" centered size="sm">
+    <Modal opened={opened} onClose={onClose} onExitTransitionEnd={reset} title="Check in to an event" centered={!isMobile} yOffset="4dvh" size="sm">
       {isCheckedIn ? (
         <Stack align="center" gap="xs" py="md">
           <ThemeIcon color="green" size={56} radius="xl">
@@ -68,6 +78,8 @@ export default function CheckInDialog({ opened, onClose, onCheckedIn, onViewTime
               type="number"
               oneTimeCode
               size="lg"
+              gap="xs"
+              styles={pinInputStyles}
               value={code}
               onChange={(value) => {
                 setCode(value)
