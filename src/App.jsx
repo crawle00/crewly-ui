@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { ActionIcon, Anchor, AppShell, Avatar, Box, Burger, Drawer, Divider, Group, Image, Indicator, ScrollArea, Stack, Text } from '@mantine/core'
+import { ActionIcon, Anchor, AppShell, Avatar, Box, Burger, Container, Drawer, Divider, Group, Image, Indicator, ScrollArea, Stack, Text, Tooltip } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconBell } from '@tabler/icons-react'
+import { IconBell, IconCircleCheck } from '@tabler/icons-react'
 import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from './router'
 import { getCurrentUser, getMyFaqQuestions, getVolunteering } from './api/API'
 import crewlyLogoLight from './assets/crewly-logo-light.svg'
@@ -12,6 +12,7 @@ import Admin from './pages/Admin'
 import CreateListing from './pages/CreateListing'
 import NotFound from './pages/NotFound'
 import Listings from './pages/Listings'
+import CheckInDialog from './components/CheckInDialog'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Home' },
@@ -31,6 +32,10 @@ function AppRoutes() {
   const [currentUser, setCurrentUser] = useState(null)
   const [menuOpened, { close: closeMenu, toggle: toggleMenu }] = useDisclosure(false)
   const [notificationsOpened, { close: closeNotifications, toggle: toggleNotifications }] = useDisclosure(false)
+  const [checkInOpened, { open: openCheckIn, close: closeCheckIn }] = useDisclosure(false)
+  // Bumped after each check-in so an open profile page refetches its timeline.
+  const [timelineVersion, setTimelineVersion] = useState(0)
+  const navigate = useNavigate()
   const [upcomingEvents, setUpcomingEvents] = useState([])
   const [faqReplies, setFaqReplies] = useState([])
 
@@ -110,7 +115,7 @@ function AppRoutes() {
   const routes = (
     <Routes>
       <Route path="/" element={<Home />} />
-      <Route path="/users/:id" element={<User />} />
+      <Route path="/users/:id" element={<User timelineVersion={timelineVersion} />} />
       <Route path="/login" element={<Login />} />
       <Route path="/admin" element={<Admin />} />
       <Route path="/createListing" element={<CreateListing />} />
@@ -132,28 +137,19 @@ function AppRoutes() {
 
   const notificationBell = (
     <Indicator label={notificationCount} size={16} disabled={notificationCount === 0} color="red" offset={4}>
-      <ActionIcon variant="subtle" color="white" size="lg" onClick={toggleNotifications} aria-label="Notifications">
+      <ActionIcon className="site-icon-button" variant="transparent" c="white" size={40} radius="xl" onClick={toggleNotifications} aria-label="Notifications">
         <IconBell size={20} />
       </ActionIcon>
     </Indicator>
   )
 
-  const navLinksWithBell = navItems.map(({ to, label }, index) => (
-    <Group key={to} gap="md" wrap="nowrap">
-      <Anchor
-        component={Link}
-        to={to}
-        className="site-nav-link"
-        c={pathname === to ? 'white' : 'blue.1'}
-        fw={pathname === to ? 600 : 500}
-        underline="never"
-        aria-current={pathname === to ? 'page' : undefined}
-      >
-        {label}
-      </Anchor>
-      {index === 0 && notificationBell}
-    </Group>
-  ))
+  const checkInButton = currentUser && (
+    <Tooltip label="Check in to an event" withArrow>
+      <ActionIcon className="site-icon-button" variant="transparent" c="white" size={40} radius="xl" onClick={openCheckIn} aria-label="Check in to an event">
+        <IconCircleCheck size={20} />
+      </ActionIcon>
+    </Tooltip>
+  )
 
   const navLinks = navItems.map(({ to, label }) => (
     <Anchor
@@ -179,39 +175,57 @@ function AppRoutes() {
             <Anchor className="site-brand" component={Link} to="/" aria-label="Crewly home">
               <Image src={crewlyLogoLight} alt="Crewly" w={{ base: 112, sm: 140 }} fit="contain" />
             </Anchor>
-            <Box hiddenFrom="sm">{notificationBell}</Box>
           </Group>
 
           <Group className="site-desktop-nav" visibleFrom="sm" gap="lg" wrap="nowrap">
-            {navLinksWithBell}
+            {navLinks}
             <Box className="site-nav-divider" w={1} h={28} bg="blue.7" />
+            <Group gap="xs" wrap="nowrap">
+              {checkInButton}
+              {notificationBell}
+              <Anchor
+                className="site-account-link"
+                component={Link}
+                to={accountHref}
+                c="white"
+                underline="never"
+                data-active={isAccountActive || undefined}
+                aria-current={isAccountActive ? 'page' : undefined}
+              >
+                <Group gap="xs" wrap="nowrap">
+                  {accountAvatar}
+                  <Text size="sm" fw={500}>{accountName}</Text>
+                </Group>
+              </Anchor>
+            </Group>
+          </Group>
+
+          <Group hiddenFrom="sm" gap="xs" wrap="nowrap">
+            {checkInButton}
+            {notificationBell}
             <Anchor
-              className="site-account-link"
+              className="site-mobile-account site-account-link"
               component={Link}
               to={accountHref}
-              c="white"
-              underline="never"
+              aria-label={accountName}
               data-active={isAccountActive || undefined}
               aria-current={isAccountActive ? 'page' : undefined}
             >
-              <Group gap="xs" wrap="nowrap">
-                {accountAvatar}
-                <Text size="sm" fw={500}>{accountName}</Text>
-              </Group>
+              {accountAvatar}
             </Anchor>
           </Group>
-
-          <Anchor
-            className="site-mobile-account site-account-link"
-            component={Link}
-            to={accountHref}
-            hiddenFrom="sm"
-            aria-label={accountName}
-            data-active={isAccountActive || undefined}
-            aria-current={isAccountActive ? 'page' : undefined}
-          >
-            {accountAvatar}
-          </Anchor>
+          <CheckInDialog
+            opened={checkInOpened}
+            onClose={closeCheckIn}
+            onCheckedIn={(user) => {
+              setCurrentUser(user)
+              setTimelineVersion((version) => version + 1)
+            }}
+            onViewTimeline={() => {
+              closeCheckIn()
+              navigate(accountHref)
+            }}
+          />
           <Drawer.Root opened={notificationsOpened} onClose={closeNotifications} position="right" size="sm">
             <Drawer.Overlay />
             <Drawer.Content>
@@ -297,7 +311,11 @@ function AppRoutes() {
           </Drawer.Root>
         </Group>
       </AppShell.Header>
-      <AppShell.Main>{routes}</AppShell.Main>
+      <AppShell.Main>
+        <Container size="xl" px={{ base: 'md', sm: 'xl' }} py={{ base: 'md', sm: 'xl' }}>
+          {routes}
+        </Container>
+      </AppShell.Main>
     </AppShell>
   )
 }

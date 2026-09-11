@@ -47,6 +47,11 @@ export async function getUser(id) {
   return response.data;
 }
 
+export async function getUserTimeline(id) {
+  const response = await axios.get(`${API_URL}/users/${id}/timeline`, requestConfig);
+  return response.data.data ?? response.data;
+}
+
 export async function getMyFaqQuestions() {
   const response = await axios.get(`${API_URL}/faq/mine/questions`, requestConfig);
   return response.data;
@@ -179,6 +184,19 @@ export async function volunteerForListing(listingId) {
 
 export async function removeVolunteerFromListing(listingId) {
   const response = await axios.delete(
-    `${API_URL}/jobs/listing/${listingId}/volunteers`, null, requestConfig)
+    `${API_URL}/jobs/listing/${listingId}/volunteers`, requestConfig)
   return response.data
+}
+
+export async function getVerificationCodes(params) {
+  const response = await axios.get(`${API_URL}/verification-codes`, {
+    ...requestConfig,
+    params,
+  });
+  return response.data.data ?? response.data;
+}
+
+export async function redeemVerificationCode(code) {
+  const response = await axios.post(`${API_URL}/verification-codes/redeem`, { code }, requestConfig);
+  return response.data;
 }

@@ -1,26 +1,23 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import {
   ActionIcon,
   Alert,
   Anchor,
   Button,
-  Container,
   Divider,
   Drawer,
   Group,
   Image,
   Modal,
   Pagination,
-  Paper,
   Select,
   SimpleGrid,
   Stack,
   Table,
   Text,
   TextInput,
-  Title,
 } from '@mantine/core'
-import { addClubLeader, createClub, deleteClub, getClubs, getUsers, removeClubLeader, updateClub } from '../api/API'
+import { addClubLeader, createClub, deleteClub, getClubs, getUsers, getVerificationCodes, removeClubLeader, updateClub } from '../api/API'
 import { Link as RouterLink, useNavigate } from '../router'
 import defaultClubIcon from '../assets/default-club-icon.svg'
 
@@ -48,6 +45,7 @@ export default function Admin() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUpdatingClub, setIsUpdatingClub] = useState(false)
   const [isUpdatingLeader, setIsUpdatingLeader] = useState(false)
+  const [verificationCodes, setVerificationCodes] = useState([])
   const navigate = useNavigate()
 
   const loadClubs = async () => {
@@ -74,6 +72,15 @@ export default function Admin() {
         setError(getErrorMessage(requestError))
       })
   }, [navigate])
+
+  useEffect(() => {
+    getVerificationCodes()
+      .then(setVerificationCodes)
+      .catch((requestError) => {
+        if (requestError.response?.status === 401 || requestError.response?.status === 403) return
+        setError(getErrorMessage(requestError))
+      })
+  }, [])
 
   useEffect(() => {
     loadClubs()
@@ -118,6 +125,7 @@ export default function Admin() {
       setIsManageOpen(false)
       setSelectedClub(null)
       await loadClubs()
+      setVerificationCodes(await getVerificationCodes())
     } catch (requestError) {
       setError(getErrorMessage(requestError))
     } finally {
@@ -177,18 +185,10 @@ export default function Admin() {
   const userById = new Map(users.map((user) => [String(user._id), user]))
 
   return (
-    <Container size="xl" py="xl">
-      <Group justify="space-between" align="flex-end" mb="xl">
-        <Stack gap={2}>
-          <Title order={1}>Admin</Title>
-          <Text c="dimmed">Manage clubs and their leaders.</Text>
-        </Stack>
-        <Button onClick={openCreate}>Create club</Button>
-      </Group>
-
+    <>
       {error && <Alert color="red" mb="md" withCloseButton onClose={() => setError('')}>{error}</Alert>}
 
-      <Paper withBorder p="md">
+      <div>
         <Group justify="space-between" mb="md">
           <TextInput
             w={320}
@@ -199,14 +199,14 @@ export default function Admin() {
               setSearch(event.currentTarget.value)
             }}
           />
-          <Text size="sm" c="dimmed">{clubs.length} clubs shown</Text>
+          <Button onClick={openCreate}>Create club</Button>
         </Group>
 
         <Table.ScrollContainer minWidth={650}>
           <Table verticalSpacing="sm" highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Club</Table.Th>
+                <Table.Th w="1%">Club</Table.Th>
                 <Table.Th>Leaders</Table.Th>
                 <Table.Th ta="right">Actions</Table.Th>
               </Table.Tr>
@@ -216,24 +216,29 @@ export default function Admin() {
                 <Table.Tr key={club._id}>
                   <Table.Td>
                     <Group gap="sm" wrap="nowrap">
-                      <Image src={club.pfp || defaultClubIcon} alt="" w={48} h={48} radius="sm" fit="cover" />
-                      <Text fw={500}>{club.name}</Text>
+                      <Image src={club.pfp || defaultClubIcon} alt="" w={48} h={48} radius="sm" fit="cover" style={{ flexShrink: 0 }} />
+                      <Text fw={500} maw={280} truncate="end" title={club.name}>{club.name}</Text>
                     </Group>
                   </Table.Td>
                   <Table.Td>
-                    <Group gap="xs">
-                      {(club.leaders || []).map((leaderId) => {
+                    <Text size="sm" component="div">
+                      {(club.leaders || []).map((leaderId, index) => {
                         const leader = userById.get(String(leaderId))
-                        return leader ? (
-                          <Anchor key={String(leaderId)} component={RouterLink} to={`/users/${leaderId}`} size="sm" underline="hover" c="inherit" >
-                            {leader.firstName} {leader.lastName}
-                          </Anchor>
-                        ) : (
-                          <Text key={String(leaderId)} size="sm">Unknown user</Text>
+                        return (
+                          <Fragment key={String(leaderId)}>
+                            {index > 0 && ', '}
+                            {leader ? (
+                              <Anchor component={RouterLink} to={`/users/${leaderId}`} size="sm" underline="hover" c="inherit">
+                                {leader.firstName} {leader.lastName}
+                              </Anchor>
+                            ) : (
+                              'Unknown user'
+                            )}
+                          </Fragment>
                         )
                       })}
-                      {club.leaders?.length === 0 && <Text size="sm" c="dimmed">No leaders</Text>}
-                    </Group>
+                      {club.leaders?.length === 0 && <Text span size="sm" c="dimmed">No leaders</Text>}
+                    </Text>
                   </Table.Td>
                   <Table.Td>
                     <Group justify="flex-end">
@@ -269,7 +274,48 @@ export default function Admin() {
         <Group justify="flex-end" mt="md">
           <Pagination total={Math.max(totalPages, 1)} value={page} onChange={setPage} disabled={isLoading} />
         </Group>
-      </Paper>
+      </div>
+
+      <Stack gap="sm" mt="xl">
+        <Text fw={600} size="lg">Verification codes</Text>
+        <Table.ScrollContainer minWidth={500}>
+          <Table verticalSpacing="sm" highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Code</Table.Th>
+                <Table.Th>Listing</Table.Th>
+                <Table.Th>Created</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {verificationCodes.map((verificationCode) => (
+                <Table.Tr key={verificationCode._id}>
+                  <Table.Td>
+                    <Text ff="monospace" fw={600}>{verificationCode.code}</Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Anchor component={RouterLink} to={`/listings/${verificationCode.listingId}`} size="sm" underline="hover" c="inherit">
+                      {verificationCode.listingTitle || 'Deleted listing'}
+                    </Anchor>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="sm" c="dimmed">
+                      {new Date(verificationCode.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </Text>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+              {verificationCodes.length === 0 && (
+                <Table.Tr>
+                  <Table.Td colSpan={3}>
+                    <Text ta="center" c="dimmed" py="xl">No verification codes yet.</Text>
+                  </Table.Td>
+                </Table.Tr>
+              )}
+            </Table.Tbody>
+          </Table>
+        </Table.ScrollContainer>
+      </Stack>
 
       <Modal opened={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create club" centered>
         <form onSubmit={handleCreate}>
@@ -333,6 +379,6 @@ export default function Admin() {
           </Stack>
         )}
       </Drawer>
-    </Container>
+    </>
   )
 }

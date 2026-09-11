@@ -76,6 +76,14 @@ body {
   background-color: rgb(255 255 255 / 10%);
 }
 
+.site-icon-button {
+  transition: background-color 160ms ease;
+}
+
+.site-icon-button:hover {
+  background-color: rgb(255 255 255 / 10%);
+}
+
 .site-desktop-nav .mantine-Avatar-root,
 .site-mobile-account .mantine-Avatar-root {
   border: 2px solid rgb(255 255 255 / 68%);

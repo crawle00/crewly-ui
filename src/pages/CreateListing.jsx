@@ -3,7 +3,6 @@ import {
   Alert,
   Button,
   Checkbox,
-  Container,
   Group,
   Image,
   List,
@@ -146,7 +145,7 @@ export default function CreateListing() {
   }
 
   return (
-    <Container size="md" py={{ base: 'lg', sm: 'xl' }}>
+    <>
       <Stack gap="xs" mb="xl">
         <Title order={1}>Create a listing</Title>
         <Text c="dimmed">Share an opportunity with the Crewly community.</Text>
@@ -237,6 +236,6 @@ export default function CreateListing() {
           </Group>
         </Stack>
       </form>
-    </Container>
+    </>
   )
 }

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { ActionIcon, Alert, Avatar, Badge, Box, Button, Container, Divider, Group, Modal, Paper, PasswordInput, SimpleGrid, Stack, Switch, TagsInput, Text, TextInput, Textarea, ThemeIcon, Timeline, Title, UnstyledButton, useMantineColorScheme } from '@mantine/core'
-import { IconClipboardList } from '@tabler/icons-react'
-import { useParams, useNavigate } from '../router'
-import { deleteAccount, getClub, getCurrentUser, getListings, getManagedClubs, getUser, logout, updateCurrentUser } from '../api/API'
+import { ActionIcon, Alert, Anchor, Avatar, Badge, Box, Button, Divider, Group, Modal, Paper, PasswordInput, SimpleGrid, Stack, Switch, TagsInput, Text, TextInput, Textarea, ThemeIcon, Timeline, Title, UnstyledButton, useMantineColorScheme } from '@mantine/core'
+import { IconCheck, IconClipboardList } from '@tabler/icons-react'
+import { Link, useParams, useNavigate } from '../router'
+import { deleteAccount, getClub, getCurrentUser, getListings, getManagedClubs, getUser, getUserTimeline, logout, updateCurrentUser } from '../api/API'
 import defaultClubIcon from '../assets/default-club-icon.svg'
 
 function getErrorMessage(requestError) {
@@ -16,17 +16,29 @@ function formatTimelineDate(dateValue) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function TimelineList({ events }) {
-  if (!events || events.length === 0) {
-    return <Text c="dimmed" fs="italic">No activity yet.</Text>
+// Every entry is an event the user was verified at (checked in with the event's code),
+// so each bullet is a check mark and the line runs through all of them.
+function TimelineList({ listings, emptyText }) {
+  if (listings.length === 0) {
+    return <Text c="dimmed" fs="italic">{emptyText}</Text>
   }
   return (
-    <Timeline active={events.length} bulletSize={14} lineWidth={2}>
-      {events.map((event, index) => {
-        const dateLabel = formatTimelineDate(event.date || event.createdAt)
+    <Timeline active={listings.length - 1} color="green" bulletSize={24} lineWidth={2} radius="sm">
+      {listings.map((listing) => {
+        const where = listing.location?.isRemote ? 'Remote' : listing.location?.name
+        const details = [listing.clubName, where].filter(Boolean).join(' · ')
+        const dateLabel = formatTimelineDate(listing.startsAt)
         return (
-          <Timeline.Item key={event._id || event.id || index} title={event.title || event.label || 'Activity'}>
-            {event.description && <Text size="sm" c="dimmed">{event.description}</Text>}
+          <Timeline.Item
+            key={listing._id}
+            bullet={<IconCheck size={14} stroke={3} />}
+            title={
+              <Anchor component={Link} to={`/listings/${listing._id}`} c="inherit" fw={600} underline="hover">
+                {listing.title}
+              </Anchor>
+            }
+          >
+            {details && <Text size="sm" c="dimmed">{details}</Text>}
             {dateLabel && <Text size="xs" c="dimmed" mt={4}>{dateLabel}</Text>}
           </Timeline.Item>
         )
@@ -35,7 +47,7 @@ function TimelineList({ events }) {
   )
 }
 
-export default function User() {
+export default function User({ timelineVersion = 0 }) {
   const { id } = useParams()
   const navigate = useNavigate()
   const { colorScheme, setColorScheme } = useMantineColorScheme()
@@ -77,6 +89,8 @@ export default function User() {
   const [passwordError, setPasswordError] = useState('')
 
   const [myListings, setMyListings] = useState([])
+
+  const [timelineListings, setTimelineListings] = useState([])
 
   useEffect(() => {
     let isMounted = true
@@ -146,6 +160,22 @@ export default function User() {
       isMounted = false
     }
   }, [currentUser, profileUser])
+
+  useEffect(() => {
+    let isMounted = true
+
+    getUserTimeline(id)
+      .then((listings) => {
+        if (isMounted) setTimelineListings(listings)
+      })
+      .catch(() => {
+        if (isMounted) setTimelineListings([])
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [id, timelineVersion])
 
   const isOwnProfile = currentUser && profileUser && String(currentUser._id) === String(profileUser._id)
 
@@ -260,15 +290,14 @@ export default function User() {
 
   if (!profileUser) {
     return (
-      <Box p="xl">
+      <Box>
         <Text c="dimmed" ta="center">User not found.</Text>
       </Box>
     )
   }
 
   return (
-    <Box p="xl">
-      <Container size={640} px={0}>
+    <>
         <Box style={{ position: 'relative' }}>
           <Box
             style={{
@@ -363,82 +392,87 @@ export default function User() {
         )}
 
         {isOwnProfile ? (
-          <Stack gap="lg">
-            <Paper withBorder radius="md" p="xl">
-              <Stack gap="lg">
-                <Box pl="md" style={{ borderLeft: '3px solid var(--mantine-color-blue-3)' }}>
-                  {bio ? (
-                    <Text fs="italic" style={{ whiteSpace: 'pre-wrap' }}>"{bio}"</Text>
-                  ) : (
-                    <Text c="dimmed" fs="italic">No bio yet.</Text>
-                  )}
-                </Box>
+          <Paper withBorder radius="md" p="xl">
+            <Stack gap="lg">
+              <Box pl="md" style={{ borderLeft: '3px solid var(--mantine-color-blue-3)' }}>
+                {bio ? (
+                  <Text fs="italic" style={{ whiteSpace: 'pre-wrap' }}>"{bio}"</Text>
+                ) : (
+                  <Text c="dimmed" fs="italic">No bio yet.</Text>
+                )}
+              </Box>
 
-                <Divider />
+              <Divider />
 
-                <Box>
-                  <Text size="sm" c="dimmed" mb={6}>Interests</Text>
-                  {interests.length > 0 ? (
-                    <Group gap={6}>
-                      {interests.map((interest) => (
-                        <Badge key={interest} color="blue" variant="light">{interest}</Badge>
-                      ))}
-                    </Group>
-                  ) : (
-                    <Text c="dimmed" fs="italic">No interests yet.</Text>
-                  )}
-                </Box>
+              <Box>
+                <Text size="sm" c="dimmed" mb={6}>Interests</Text>
+                {interests.length > 0 ? (
+                  <Group gap={6}>
+                    {interests.map((interest) => (
+                      <Badge key={interest} color="blue" variant="light">{interest}</Badge>
+                    ))}
+                  </Group>
+                ) : (
+                  <Text c="dimmed" fs="italic">No interests yet.</Text>
+                )}
+              </Box>
 
-                <Divider />
+              <Divider />
 
-                <Box>
-                  <Text size="sm" c="dimmed" mb={6}>Clubs</Text>
-                  {managedClubs.length > 0 ? (
-                    <Stack gap="sm">
-                      {managedClubs.map((club) => (
-                        <Group key={club._id} gap="sm" wrap="nowrap">
-                          <Avatar src={club.pfp || defaultClubIcon} radius="sm" size={36} />
-                          <Text>{club.name}</Text>
-                        </Group>
-                      ))}
-                    </Stack>
-                  ) : (
-                    <Text c="dimmed" fs="italic">You don't lead any clubs yet.</Text>
-                  )}
-                </Box>
-              </Stack>
-            </Paper>
-
-            <Paper withBorder radius="md" p="xl">
-              <Text size="sm" c="dimmed" mb="md">Timeline</Text>
-              <TimelineList events={profileUser.timeline} />
-            </Paper>
-
-            <Paper withBorder radius="md" p="xl">
-              <Text size="sm" c="dimmed" mb={6}>My listings</Text>
-              {myListings.length > 0 ? (
-                <Stack gap="sm">
-                  {myListings.map((listing) => (
-                    <UnstyledButton
-                      key={listing._id}
-                      onClick={() => navigate(`/listings/${listing._id}`)}
-                      style={{ width: '100%' }}
-                    >
-                      <Group gap="sm" wrap="nowrap">
-                        <ThemeIcon variant="light" size={36} radius="sm" color="blue">
-                          <IconClipboardList size={18} />
-                        </ThemeIcon>
-                        <Text>{listing.title}</Text>
+              <Box>
+                <Text size="sm" c="dimmed" mb={6}>Clubs</Text>
+                {managedClubs.length > 0 ? (
+                  <Stack gap="sm">
+                    {managedClubs.map((club) => (
+                      <Group key={club._id} gap="sm" wrap="nowrap">
+                        <Avatar src={club.pfp || defaultClubIcon} radius="sm" size={36} />
+                        <Text>{club.name}</Text>
                       </Group>
-                    </UnstyledButton>
-                  ))}
-                </Stack>
-              ) : (
-                <Text c="dimmed" fs="italic">You haven't created any listings yet.</Text>
-              )}
-            </Paper>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Text c="dimmed" fs="italic">You don't lead any clubs yet.</Text>
+                )}
+              </Box>
 
-            <Paper withBorder radius="md" p="xl">
+              <Divider />
+
+              <Box>
+                <Text size="sm" c="dimmed" mb="md">Timeline</Text>
+                <TimelineList
+                  listings={timelineListings}
+                  emptyText="No verified events yet. At an event you signed up for, use the check-in button in the top bar with the organizer's 6-digit code."
+                />
+              </Box>
+
+              <Divider />
+
+              <Box>
+                <Text size="sm" c="dimmed" mb={6}>My listings</Text>
+                {myListings.length > 0 ? (
+                  <Stack gap="sm">
+                    {myListings.map((listing) => (
+                      <UnstyledButton
+                        key={listing._id}
+                        onClick={() => navigate(`/listings/${listing._id}`)}
+                        style={{ width: '100%' }}
+                      >
+                        <Group gap="sm" wrap="nowrap">
+                          <ThemeIcon variant="light" size={36} radius="sm" color="blue">
+                            <IconClipboardList size={18} />
+                          </ThemeIcon>
+                          <Text>{listing.title}</Text>
+                        </Group>
+                      </UnstyledButton>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Text c="dimmed" fs="italic">You haven't created any listings yet.</Text>
+                )}
+              </Box>
+
+              <Divider />
+
               <Group justify="space-between">
                 <Box>
                   <Text fw={600}>Dark mode</Text>
@@ -450,9 +484,9 @@ export default function User() {
                   aria-label="Toggle dark mode"
                 />
               </Group>
-            </Paper>
 
-            <Paper withBorder radius="md" p="xl">
+              <Divider />
+
               <Group justify="space-between">
                 <Button variant="default" onClick={openPasswordModal}>
                   Change password
@@ -461,8 +495,8 @@ export default function User() {
                   Delete account
                 </Button>
               </Group>
-            </Paper>
-          </Stack>
+            </Stack>
+          </Paper>
         ) : (
           <Paper withBorder radius="md" p="xl">
             <Stack gap="lg">
@@ -517,7 +551,10 @@ export default function User() {
 
               <Box>
                 <Text size="sm" fw={600} c="dimmed" mb={6}>Timeline</Text>
-                <TimelineList events={profileUser.timeline} />
+                <TimelineList
+                  listings={timelineListings}
+                  emptyText={`${profileUser.firstName} hasn't been verified at any events yet.`}
+                />
               </Box>
 
               {profileUser.createdAt && (
@@ -528,7 +565,6 @@ export default function User() {
             </Stack>
           </Paper>
         )}
-      </Container>
 
       <Modal opened={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit profile details" centered size="md">
         <form onSubmit={handleSaveProfile}>
@@ -644,6 +680,6 @@ export default function User() {
           </Button>
         </Group>
       </Modal>
-    </Box>
+    </>
   )
 }

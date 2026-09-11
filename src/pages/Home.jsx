@@ -218,11 +218,10 @@ export default function Home() {
   }, [appliedFilters, hasNextPage, loading, loadingMore, page]);
 
   return (
-    <Box maw={1440} mx="auto" p={{ base: 'md', sm: 'xl' }}>
+    <>
       <Stack gap="xl">
         <Box>
           <Title order={1} size="h2">Find your next opportunity</Title>
-          <Text c="dimmed" mt="xs">Make an impact with your campus community.</Text>
         </Box>
 
         <ListingFilters
@@ -276,6 +275,6 @@ export default function Home() {
           </>
         )}
       </Stack>
-    </Box>
+    </>
   );
 }
